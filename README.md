@@ -41,6 +41,7 @@ brainstorm, and the open questions.
 | [docs/concept.md](docs/concept.md) | The three-column model, the AI layer, FliHub integration |
 | [docs/open-questions.md](docs/open-questions.md) | What's genuinely unresolved — trigger words, scrolling, scope |
 | [docs/source/b421-2026-08-19-plaud.md](docs/source/b421-2026-08-19-plaud.md) | Raw origin brainstorm (Captain's Log B421) |
+| [docs/prior-art-kybernesis-prompter.md](docs/prior-art-kybernesis-prompter.md) | A working two-column prompter built the day before — what it settled, what it didn't |
 
 ## Related
 
