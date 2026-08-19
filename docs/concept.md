@@ -44,18 +44,36 @@ know what's meant to be said. During recording it's a safety net, not the focus.
 
 ## 3. Recording flow — and where FliHub comes in
 
-Recording is **not** one continuous take. Expected behaviour is a pause between paragraphs:
+Recording is **not** one continuous take, and you rarely keep the first attempt. You say a
+section, dislike it, say it again — that retrying *is* the workflow:
 
 ```
-  section 1 ──► record ──► stop
-  section 2 ──► record ──► stop        each section = its own clip
-  section 3 ──► record ──► stop
-                    │
-                    └──► FliHub ──► combined into the final video
+  Ecamm Live ──► a file lands in a folder      David drives this himself:
+      ▲                    │                   foot pedal to start/stop,
+   you speak               ▼                   Stream Deck for scenes
+                      FliHub watches
+                           │
+                           ▼
+                   queue of takes for this video
+                   (creates the queue if none exists)
+                           │
+                     ┌─────┴─────┐
+                  take 1 · take 2 · take 3 …
+                           │
+                           ▼
+                    you PROMOTE one
+                           │
+                           ▼
+              the project video — moved to its
+              final subfolder and filename
 ```
 
-So Teletubby produces many small recordings keyed to script sections, and FliHub owns
-capture, storage, and assembly. Teletubby doesn't need to be a video editor.
+**Ecamm Live owns capture. FliHub is a watcher**: it watches the folder Ecamm writes into,
+routes each take into that video's queue, and holds every attempt — holding all of them is
+the thing it does well. When you're ready you promote one, and that becomes the project
+video. Other tabs in FliHub do other jobs.
+
+Teletubby sits before all of it. It never records and never touches a file.
 
 ## 4. The AI layer
 

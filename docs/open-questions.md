@@ -43,11 +43,21 @@ needs a second user profile. Specifically worth researching: **what deficiencies
 different people have with teleprompters?** David's is memory for recited sentences —
 other failure modes (pacing, gaze, nerves, reading speed) may need different tools.
 
-## Q5. Scope boundary with FliHub
+## Q5. Scope boundary with FliHub ✅ answered 2026-08-19
 
-Where does Teletubby stop? Working assumption: Teletubby owns script + prompting + section
-markers; FliHub owns capture, storage, and stitching. Needs confirming against FliHub's
-actual inbox API before any code is written.
+The old assumption here — *"FliHub owns capture, storage and stitching"* — was wrong, and so
+was the same claim in concept.md §3. Checked against FliHub itself:
+
+**Ecamm Live owns capture**, driven by David personally (foot pedal to start/stop, Stream Deck
+for scenes). When he stops, a file lands in a folder. **FliHub is a watcher** on that folder:
+it routes each take into a queue of takes for that video, creating the queue if none exists,
+and holds every attempt — record, dislike, record again is the normal loop, and holding all of
+them is what FliHub does well. When David is ready he **promotes** one and it becomes the
+project video, moved to its final subfolder and filename.
+
+So Teletubby sits *before* the chain and never records, never touches a file, and never
+stitches. Nothing about the prompter needs FliHub's inbox API, which is a document drop, not
+a video path.
 
 ## Q6. Where do scripts come from?
 
