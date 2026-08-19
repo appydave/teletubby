@@ -27,8 +27,10 @@ learn from every fumbled take so the next one comes out better.**
 
 - **"Talent" is the person on camera** — the industry word, and precise here because three roles
   that are usually one person will eventually split: whoever **originated** the idea, the
-  **talent** who says it, and the **operator** driving the app. For David's own videos all three
-  are him. For a client they are not, and that is when the word earns its keep.
+  **talent** who says it, and the **operator** driving the app. On an AppyDave video all three
+  are David. On the Kybernesis explainers they already split — Tom originates, David is talent
+  and operator — and that is a teammate, not a client. Split them again for a client and the
+  word earns its keep a third time.
 - **It is for David first**, on his journey as AppyDave to be an awesome YouTuber: information
   lands in front of his eyes fast, in the right shape, so he can talk to it on camera like a
   professional. Beyond him, the audience is **any content creator who struggles with reading a
@@ -40,9 +42,9 @@ learn from every fumbled take so the next one comes out better.**
   hypothetical users to build settings for, and not people whose feature requests outrank the
   talent's.
 - **Meaning belongs to provenance; voice belongs to the talent.** The original script or idea —
-  Tom's, a client's, anyone's — is the *provenance*. What David produces from it is a spin-off
-  expressing how he wants to **say** it. Teletubby may move the wording toward how he actually
-  speaks. It may never change what the script means.
+  written by a teammate, a client, or the talent themselves — is the *provenance*. What David
+  produces from it is a spin-off expressing how he wants to **say** it. Teletubby may move the
+  wording toward how he actually speaks. It may never change what the script means.
 - **It learns from the mistakes.** Over time the system learns from what goes wrong during
   recording and improves both the transcripts and the teleprompter technique. **"Prompting" here
   always means teleprompter craft — never LLM prompt engineering.** The two words must not be

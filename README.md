@@ -57,6 +57,8 @@ a display column; nothing generates those headings automatically.
 | [docs/concept.md](docs/concept.md) | The three-column model, the AI layer, FliHub integration |
 | [docs/open-questions.md](docs/open-questions.md) | What's genuinely unresolved — trigger words, scrolling, scope |
 | [docs/source/b421-2026-08-19-plaud.md](docs/source/b421-2026-08-19-plaud.md) | Raw origin brainstorm (Captain's Log B421) |
+| [docs/north-star.md](docs/north-star.md) | What it is for, and the test that settles feature arguments |
+| [docs/requirements.md](docs/requirements.md) | What gets built — zone model, camera constraint, trigger styles |
 | [CLAUDE.md](CLAUDE.md) | How to work on this app — the rules, the data pipeline, the gotchas |
 | [docs/prior-art-kybernesis-prompter.md](docs/prior-art-kybernesis-prompter.md) | A working two-column prompter built the day before — what it settled, what it didn't |
 

@@ -19,6 +19,9 @@ does not fit.
 
 ⚠️ **"Prompting" in this repo always means teleprompter craft — never LLM prompt engineering.**
 
+What gets built — the zone model, the camera-position constraint, trigger styles:
+**[docs/requirements.md](docs/requirements.md)**.
+
 Background: [docs/concept.md](docs/concept.md) · origin brainstorm
 [Captain's Log B421](docs/source/b421-2026-08-19-plaud.md).
 
