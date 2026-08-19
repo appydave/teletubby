@@ -150,6 +150,23 @@ So the transformation is a **cadence rewrite, not a rewording** — David's own 
 The measured constraint on it: **every word dropped must be a function word or a synonym — no
 content term is lost.**
 
+### The re-cadenced scripts already exist
+
+Three scripts have been rewritten against the gate and are committed as
+`phase-1-scripts/v0N-rewrite.txt`, each paired with its `v0N-tom-original.txt`. Measured:
+
+| | Tom's originals | Re-cadenced | David native |
+|---|---|---|---|
+| mean breath group | 7.30 | **11.17** | 11.5 |
+| breaks / 100 words | 7.89 | **3.58** | 3.27 |
+| Tom's word types retained | (baseline) | **91–96%** | improvising kept **17%** |
+
+**So the provenance/cadence pair in this section is not hypothetical** — three real pairs exist and
+can be loaded today. The build currently ships only Tom's originals.
+
+⚠️ **The acceptance test exists; the generator does not.** Those three were rewritten **by hand
+against the gate**, not produced by it. Treat cadence rewriting as *scored, not automated*.
+
 ### The finding that reframes the problem
 
 The same analysis overturned the assumption the concept was built on. **Reading was David's
@@ -245,9 +262,15 @@ scripts, in a commercial relationship where the provenance owner has a contractu
 The consequence for the build: **nothing may assume one talent's speech profile.** The 11.5-word
 breath group is David's measurement, not a constant. Every talent gets their own.
 
-## 8. The FliHub feedback contract
+## 8. The FliHub feedback loop — direction only, NOT buildable
 
-Teletubby still owns no video and no file. What it gains is an **event**, and this is the return
+> 🚧 **Ruled 2026-08-19: you cannot rely on FliHub for this yet. It is all future.**
+> The queue-and-promote model below is where David thinks FliHub *should go*, from one conversation
+> with someone else — it is **not a contract**, and FliHub is slated for a ground-up rebuild.
+> Nothing in this section may be built against today, and no acceptance criterion may depend on it.
+> It is recorded so the shape is not lost, not so it can be implemented.
+
+Teletubby still owns no video and no file. What it would gain is an **event**, and this is the return
 edge of the loop in §0.
 
 **On each take landing in the queue** — not on promotion — FliHub transcribes it and tells
@@ -275,6 +298,43 @@ The application does not get smart. It exposes the event and the comparison; jud
 the line, reorder the triggers, flag the stumble — belongs to the agent, consistent with the Star's
 ruling that Teletubby edits nothing itself and instead makes itself drivable.
 
+## 9. The script gate — the half that is buildable today
+
+There are two ways to score, and they are not equally available.
+
+| | Score the **script**, before the take | Score the **take**, after it |
+|---|---|---|
+| Needs | nothing but the text | a transcript — i.e. §8, which is future |
+| Nature | **deterministic**, ~40 lines of stdlib | depends on an unbuilt loop |
+| Status | **buildable now** | blocked |
+
+**A working scorer already exists** at `phase-1-scripts/score.py` in the Kybernesis brain — eight
+falsifiable threshold rules: length, breath-group mean, break density, sentence-length standard
+deviation, zero em-dash appositives, 100% of mandatory terms retained, zero anti-voice words, and
+channel bookends.
+
+**The requirement**: a script that fails the talent's envelope is **visibly flagged** before it is
+ever put on screen — or refused. No model, no live listening, no FliHub.
+
+Two things this must not become:
+
+- **It must not interrupt a take.** Scoring happens before, or at a take boundary. Interrupting
+  someone mid-sentence to tell them they fluffed it fails the Star's test outright.
+- **Thresholds are per talent and are never ported.** David's envelope is ~11.2-word breath groups
+  with ≤3.6 breaks per 100 words. Those are *his measurements*. Applying them to Alex makes the gate
+  meaningless.
+
+### Where a new talent's envelope comes from
+
+An earlier open item assumed a talent needs 45 takes against a known script. **They do not.** David's
+envelope was derived from **318 punctuated transcripts / ~229k words of ordinary published video** —
+the 45 takes were the *failure evidence*, not the envelope. `verbal-style-forge` already does this
+derivation.
+
+One hard constraint: **the corpus must be punctuated.** Auto-captions carry no terminal punctuation
+and mixing them in silently corrupts the result — it pushed mean sentence length from 16.5 to 34.9.
+Filter to at least two terminal marks per 100 words.
+
 ---
 
 ## Open — requirements-level
@@ -295,14 +355,22 @@ them changes what Teletubby is for.
 5. **Whether the zone arrangement persists per talent, per project, or per take.**
 6. **Does Teletubby hold an incoming idea, or only a transcript?** The §0 seam. The largest of
    these, because it decides whether Teletubby is a prompter or a content tool.
-7. **What Teletubby does with a poor Jaccard score in the moment.** The comparison is specified;
+7. ~~**What Teletubby does with a poor Jaccard score in the moment.**~~ **Answered.** Score the
+   script before the take (deterministic, §9); score the take only at a take boundary, never
+   mid-sentence. The mid-take half is blocked on §8 regardless.
+   *Superseded detail:* The comparison is specified;
    whether it interrupts the talent mid-session, waits for the end of the take, or only ever
    surfaces to the agent is not — and interrupting someone mid-take to tell them they fluffed it
    fails the Star's test outright.
-8. **How a talent's speech profile is established.** David's 11.5-word breath group came from 45
-   takes against a known script. A new talent has no corpus, so either the app works without a
-   profile until one exists, or there is a calibration step nobody has designed.
-9. **Where the camera actually is.** §2 requires the driven zone to sit nearest the lens, but
+8. ~~**How a talent's speech profile is established.**~~ **Answered** — see §9. Derived from any
+   corpus of the talent's own *punctuated* unscripted speech via `verbal-style-forge`; the 45 takes
+   were failure evidence, not the envelope. Remaining work is a one-off measurement per talent
+   (AI-TLDR has a verbal style but no measured envelope), not a Teletubby feature.
+9. **Which corpus the trigger-style experiment runs against.** Trigger styles derived from Tom's
+   7-word breath groups are **not the same experiment** as styles derived from the re-cadenced
+   11-word versions. Carrying both and letting the talent switch turns "which trigger style" and
+   "which cadence" into one two-axis experiment instead of two sequential ones. Unresolved.
+10. **Where the camera actually is.** §2 requires the driven zone to sit nearest the lens, but
    nothing tells the app which edge that is — the talent sets it, it is detected, or it is inferred
    from where they drag the window.
 

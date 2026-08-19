@@ -171,13 +171,27 @@ Numbered so a review can accept or reject each one independently.
 12. The window and the zone order can both be arranged so the driven zone sits nearest the lens, on either side
 13. The set view lists every script in the set with a summary, one script visible at a time, reachable by keyboard
 14. All three trigger styles are derived for every script, and switching between them mid-session keeps the beat position
-15. A provenance transcript and a cadence transcript are both viewable and clearly distinguished
-16. On a take landing in the FliHub queue, Teletubby receives the transcript and reports a Jaccard comparison against what was intended — **over a socket connection opened from main, never from the renderer** (see the CSP note under Boundaries)
+15. A provenance transcript and a cadence transcript are both viewable and clearly distinguished — **three real pairs already exist** (`phase-1-scripts/v0N-rewrite.txt` + `v0N-tom-original.txt`), so this is partly satisfiable today rather than pending; the build currently loads only the originals
+16. ~~On a take landing in the FliHub queue…~~ **BLOCKED — removed from this spec.** Ruled
+    2026-08-19: FliHub cannot be relied on for this yet, it is all future, and it is slated for a
+    ground-up rebuild. See requirements §8, which is now marked direction-only. **Replaced by
+    criterion 16b.**
+16b. A script is scored against the talent's measured envelope **before it is put on screen**, and a
+    failing script is visibly flagged or refused. Deterministic — eight threshold rules, no model, no
+    transcript, no FliHub. Thresholds are per talent and never ported between talents.
+
 17. Every rule in 9–16 that can be a store assertion has a test
 
 **Explicitly out of scope for this spec**: live listening, waffle detection, sync-to-voice, automatic
-trigger generation, cadence rewriting, and script authoring. Named in the North Star; not specified
-here.
+trigger *generation*, cadence *rewriting*, and script authoring. Named in the North Star; not
+specified here.
+
+⚠️ **Scope correction — cadence *checking* is not AI work and does not belong in the deferred layer.**
+Generating a re-cadenced script may need a model. **Verifying that a script sits inside the talent's
+measured envelope does not** — it is eight deterministic threshold rules and ~35 lines of stdlib,
+already written and reproducible. That is why criterion 16b is in this spec while cadence rewriting
+stays out. The honest position is *"the acceptance test exists, the generator does not"* — the three
+re-cadenced scripts were rewritten by hand against the gate.
 
 ## Open Questions
 
@@ -189,22 +203,18 @@ Blocking ones first.
    side the lens is on — talent sets it, or it is inferred from window position.
 3. **Should `packageManager` be pinned to npm now?** One line, prevents a failure ImageDrip already
    paid for. Recommend yes.
-4. **What happens on a poor Jaccard score mid-take?** Interrupting the talent to say they fluffed it
-   fails the objective outright.
-5. **How does a talent with no corpus get a speech profile?** David's 11.5-word breath group came
-   from 45 takes; a new talent has none.
-6. **The FliHub contract — checked, and mostly better than assumed.** Verified against FliHub's
-   source rather than left as an assumption:
-   - ✅ **The push mechanism exists.** FliHub runs socket.io throughout, and its `WatcherManager`
-     already runs a transcripts watcher that emits **`transcripts:changed`**.
-   - ✅ **Transcript retrieval exists** — a transcriptions route module with
-     `GET /transcript/:filename`, `GET /status/:filename` and `POST /queue`.
-   - ⚠️ **But "transcribe on landing" is a change to FliHub, not to Teletubby.** Transcription is
-     *queued* (`POST /queue`); nothing observed makes it fire automatically when a take arrives.
-     requirements §8 reads as though FliHub simply does this — **it does not yet.** Something has to
-     call the queue on arrival, and that work lands in FliHub's repo.
-   - ⚠️ **Cross-repo dependency, and FliHub is slated for a ground-up rebuild.** Building against
-     today's routes may be building against a surface that is about to change.
-
-   **Open**: is criterion 16 in this spec at all, or does it wait for the FliHub rebuild? Specifying
-   a contract across a repo that is about to be rewritten is how you get two wrong contracts.
+4. ~~**What happens on a poor Jaccard score mid-take?**~~ **Answered.** Score the script before the
+   take; score a take only at its boundary. Interrupting mid-sentence fails the objective. The
+   mid-take half is blocked on FliHub regardless.
+5. ~~**How does a talent with no corpus get a speech profile?**~~ **Answered.** From any corpus of
+   their own *punctuated* unscripted speech via `verbal-style-forge` — David's envelope came from
+   318 transcripts / ~229k words of ordinary published video, not from the 45 takes. Auto-captions
+   must be filtered out; they are unpunctuated and corrupt the measure.
+6. **FliHub — ruled out for now.** I verified socket.io and a transcriptions module exist in
+   FliHub's current source, and was about to specify against them. **David's ruling supersedes that
+   reading**: the queue-and-promote model came from one conversation about where FliHub *should* go,
+   it is not a contract, and FliHub is being rebuilt from the ground up. Specifying against today's
+   routes would produce a contract against a surface that is about to vanish.
+7. **Which corpus does the trigger-style experiment run against?** Styles derived from Tom's 7-word
+   breath groups are not the same experiment as styles derived from the 11-word re-cadenced
+   versions. Criteria #14 and #15 only mean what they say if both corpora are loadable.
