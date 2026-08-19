@@ -1,7 +1,11 @@
 # Teletubby — Requirements
 
-**Status:** open, and expected to grow. Seeded 2026-08-19 from rulings given during the North
-Star interview that were **requirements-level rather than direction-level**.
+**Status:** open, and expected to grow.
+
+**Sources.** Seeded 2026-08-19 from the North Star interview, then filled out from the three
+Captain's Log recordings of that morning — **B421** (the concept, 11m), **B422** (the build and the
+cadence analysis, 77m) and **B424** (the pipeline session with Jan, 39m). Where those disagree,
+B422's measurements win over B421's assumptions; §4 records the one place they did.
 
 **What belongs here vs the Star.** [north-star.md](north-star.md) says what Teletubby is *for*
 and settles feature arguments. This file says what gets **built**. If fixing something needs no
@@ -15,6 +19,48 @@ attention on the camera, and less on the screen?**
 > is where it is going, not what it currently does. Nothing here has been built yet.
 
 ---
+
+## 0. Where Teletubby sits
+
+Teletubby is one station in a pipeline, and most of its requirements only make sense from that
+position.
+
+```
+  idea ──► research / fact-gathering ──► content plan ──► transcript(s)
+                                                               │
+                                                               ▼
+                                                          TELETUBBY
+                                                    (shape it · prompt it)
+                                                               │
+                                                               ▼
+                                        Ecamm  ──►  a file lands in a folder
+                                     (foot pedal,          │
+                                      Stream Deck)         ▼
+                                                        FliHub
+                                              queue of takes · promote one
+                                                           │  │
+                                    transcript of the take │  └──► edit · hyperframes ──► export
+                                                           ▼
+                                                       TELETUBBY
+                                             (compare said vs intended — §8)
+```
+
+Research feeding the content plan comes from three places: **conversations already in Captain's
+Log, Claude Code sessions, and plain conversation with a human** who says "go and research this."
+
+**Note the shape: it is a loop, not a line.** Teletubby sits before the recording and also receives
+the result of it. That return edge is what "learn from every fumbled take" means in practice.
+
+### 🔴 Open seam — does Teletubby hold the idea?
+
+Flagged in B424 and left unresolved in the same breath: *"I think Teletubby has to hold the idea
+coming in… this is where there's a little bit of confusion — it's a seam."*
+
+The question is whether an incoming **idea** (not yet a transcript) belongs to Teletubby or to
+whatever does the research and content planning. **It decides whether Teletubby is a prompter or a
+content tool**, so it is the largest unanswered scope question in this document. It is deliberately
+recorded here and not in the Star, because the Star's answer — *a shape they can talk to* — holds
+either way.
 
 ## 1. The zone model
 
@@ -90,6 +136,35 @@ The Star's rule governs the relationship: **meaning belongs to provenance, voice
 talent.** A cadence transcript may differ from its provenance in wording and rhythm; it may not
 differ in what it means.
 
+### What "cadence" actually means here — it is measured, not felt
+
+This is the part that was vague and is now specific. A Jaccard-similarity analysis over 45 takes
+against Tom's scripts found the defect is **rhythm, not vocabulary**:
+
+| | Tom writes | David speaks |
+|---|---|---|
+| breath group | ~7 words | **~11.5 words** |
+
+So the transformation is a **cadence rewrite, not a rewording** — David's own summary to Tom:
+*"they're not rewritten so that the words change, they're rewritten so that the cadence changes."*
+The measured constraint on it: **every word dropped must be a function word or a synonym — no
+content term is lost.**
+
+### The finding that reframes the problem
+
+The same analysis overturned the assumption the concept was built on. **Reading was David's
+strongest mode**, landing in one or two takes. **Improvising is what failed** — it dropped 20 of
+Tom's 24 signature terms and overran by two to four times.
+
+Two consequences, and both matter for what gets built:
+
+1. **The goal was never to stop reading. It is to stop *looking* like reading.** A requirement
+   that removes the transcript because "reading is bad" would be building for a defect that was
+   measured and found not to exist.
+2. **Some of "I'm bad at teleprompters" was furniture, not skill** — the script was on a monitor
+   to the *left* of the lens, which is precisely the problem a teleprompter exists to remove. This
+   is why §2 is a requirement and not a preference.
+
 ## 5. All three trigger styles are derived — the talent picks
 
 Column-2 content is generated in **three styles, all of them, every time**:
@@ -104,6 +179,23 @@ scenario.** There is no single correct style to be discovered and hard-coded.
 > This is deliberately kept out of the North Star. *Which* style works best is settled by the
 > talent recording takes — never by argument — and that ruling lives in the Star. That all three
 > get derived and are switchable is a build detail, and it lives here.
+
+### Each style has a scenario it is right for
+
+The choice is not a preference setting — it tracks **how well the talent knows the subject and how
+good the transcript is**. This is what makes all three worth deriving:
+
+| Style | Use it when | The trade you are accepting |
+|---|---|---|
+| **A** near-verbatim | You are cast as the expert but **do not know the topic well**. You have to read. | You will look somewhat like you are reading. Accepted deliberately. |
+| **B** compressed concept | The transcript is **good and you want to say it**, you just need the words in the right order. | The middle ground — something to read that does not read as reading. |
+| **C** loose keywords | You **know the topic cold** and only need keeping on track. Fits best when there is no real transcript — it is a guideline, not a script. | You must be able to phrase it live; if you blank, it gives you nothing to recover with. |
+
+David's own split across his two contexts: *"from Tom's transcript I'd love style A, because I
+don't know the subject matter too much. With my own videos I might want B or C."*
+
+**The same talent needs different styles on different jobs**, which is why the choice is per
+scenario and cannot be a one-time setup question.
 
 ## 6. The set view — orienting on a batch of scripts
 
@@ -141,6 +233,48 @@ separate occasion, which makes the ruling harder to drift away from.
 verbal-style document, with a descriptive voice profile and a large voice corpus behind it. There
 is no file literally named `VOICE.md`, and one should not be created — see North Star open item 4.
 
+## 7. Teletubby serves more than one talent
+
+Not a future nicety — it is the second real use case and it sharpens the provenance rule.
+
+**The AITLDR / sponsor case**: a sponsor supplies "this is how you should say it", and Alex has his
+own voice and does not want to say it that way. **Teletubby is what brings the two together** —
+the sponsor's meaning, the talent's cadence. That is the same provenance/voice split as Tom's
+scripts, in a commercial relationship where the provenance owner has a contractual stake.
+
+The consequence for the build: **nothing may assume one talent's speech profile.** The 11.5-word
+breath group is David's measurement, not a constant. Every talent gets their own.
+
+## 8. The FliHub feedback contract
+
+Teletubby still owns no video and no file. What it gains is an **event**, and this is the return
+edge of the loop in §0.
+
+**On each take landing in the queue** — not on promotion — FliHub transcribes it and tells
+Teletubby: a take exists, and here is what was actually said. Teletubby compares that against what
+was meant to be said.
+
+- **Transcription must move earlier.** Today it happens only when a take is promoted into the
+  project. That is too late to be useful, because the comparison is what should *inform* the
+  promotion.
+- **It upgrades take selection from deterministic to content-aware.** Take scoring today is
+  mechanical — recency, length, and the grey/green/yellow that follows from it. With a transcript,
+  an agent can read the content: David's own example is that saying *"fuck"* mid-take is a reliable
+  signal the take is dead, and it can be tagged the moment it lands.
+- **The comparison is the Jaccard score from §4.** Roughly: at 0.9 or higher you said the
+  transcript in your own words; at 0.5 you said something else. Below the line is a mode detector,
+  not a grade.
+- **Over time it learns the stumbles**: *"he keeps falling over this same word — I suggest we
+  change this word."* That suggestion is the payoff of the whole loop.
+
+### The split that keeps this honest
+
+> **The Teletubby application receives the event. The Teletubby agent decides what to do with it.**
+
+The application does not get smart. It exposes the event and the comparison; judgement — rewrite
+the line, reorder the triggers, flag the stumble — belongs to the agent, consistent with the Star's
+ruling that Teletubby edits nothing itself and instead makes itself drivable.
+
 ---
 
 ## Open — requirements-level
@@ -159,6 +293,18 @@ them changes what Teletubby is for.
    changelog is likely needed — but the editing is done by an agent through the app's tools, not
    by controls inside Teletubby.
 5. **Whether the zone arrangement persists per talent, per project, or per take.**
+6. **Does Teletubby hold an incoming idea, or only a transcript?** The §0 seam. The largest of
+   these, because it decides whether Teletubby is a prompter or a content tool.
+7. **What Teletubby does with a poor Jaccard score in the moment.** The comparison is specified;
+   whether it interrupts the talent mid-session, waits for the end of the take, or only ever
+   surfaces to the agent is not — and interrupting someone mid-take to tell them they fluffed it
+   fails the Star's test outright.
+8. **How a talent's speech profile is established.** David's 11.5-word breath group came from 45
+   takes against a known script. A new talent has no corpus, so either the app works without a
+   profile until one exists, or there is a calibration step nobody has designed.
+9. **Where the camera actually is.** §2 requires the driven zone to sit nearest the lens, but
+   nothing tells the app which edge that is — the talent sets it, it is detected, or it is inferred
+   from where they drag the window.
 
-*Nothing in this file has been implemented. It records what was ruled, so the build has something
-to be measured against.*
+*Nothing in this file has been implemented. It records what was ruled and what was measured, so the
+build has something to be checked against.*
