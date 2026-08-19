@@ -105,6 +105,42 @@ scenario.** There is no single correct style to be discovered and hard-coded.
 > talent recording takes — never by argument — and that ruling lives in the Star. That all three
 > get derived and are switchable is a build detail, and it lives here.
 
+## 6. The set view — orienting on a batch of scripts
+
+Recorded from Captain's Log B418 (2026-08-17), two days before the Teletubby concept was named.
+The trigger was not a feature idea, it was a problem:
+
+> *"There's a bunch of scripts that Tom told me to go and make videos around, and I'm sitting with
+> a bit of fear because I don't understand what he's asking me to do."*
+
+**Fear of a batch you have not read is the first thing Teletubby has to solve** — before any
+prompting happens, the talent has to be able to take in what they have been handed.
+
+- **A summary per script**, brief, so a set of twelve is scannable in one sitting.
+- **All of them reachable in one place** — the set is the unit, not the individual script.
+- **One script on screen at a time.** Stated flatly: *"I only ever want to look at one script at a
+  time."* Two scripts side by side is not a feature, it is the thing to avoid.
+- **Easy movement between them** — this is the same requirement as §3, arrived at independently.
+- **Visual, and low effort to read.** *"Don't give me too much brain drain on this, keep it
+  simple."*
+
+### Provenance and voice — the rule in his own words
+
+The same passage contains the provenance/voice split that the North Star later ratified, stated
+before anyone had a term for it:
+
+> *"Read the voice document for AppyDave. I need you to understand how I think about transcripts
+> and videos. **You shouldn't use it to rewrite his scripts, but you could use it to have variations
+> of these scripts.**"*
+
+That is exactly *meaning belongs to provenance, voice belongs to the talent* — the provenance script
+is not rewritten; variations of it are produced. Recorded here because it is corroboration from a
+separate occasion, which makes the ruling harder to drift away from.
+
+**"The voice document"** is his own name for it. The prescriptive rules live in AppyDave's
+verbal-style document, with a descriptive voice profile and a large voice corpus behind it. There
+is no file literally named `VOICE.md`, and one should not be created — see North Star open item 4.
+
 ---
 
 ## Open — requirements-level
