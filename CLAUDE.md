@@ -2,17 +2,25 @@
 
 ## North Star
 
-> **A teleprompter you GLANCE at, not read from. The words that come out of your mouth
-> should be yours; the screen only keeps you on track.**
+> **Put the words in front of the talent in a shape they can talk to rather than read from —
+> and learn from every fumbled take so the next one comes out better.**
 
-Three columns instead of one scrolling wall of text: topic headings · trigger words ·
-full transcript. **Column 2 is the product** — everything else is context.
+Interviewed and ratified by David, 2026-08-19. Full document — including who this is for,
+whether it edits scripts, what Teletubby is NOT, and the test that settles feature arguments:
+**[docs/north-star.md](docs/north-star.md)**.
 
-The full concept is [docs/concept.md](docs/concept.md); the origin brainstorm is
+The corollary that follows from it: three columns instead of one scrolling wall of text —
+topic headings · trigger words · full transcript. **Column 2 is the product**, everything else
+is context.
+
+**The test, when a feature argument comes up:** *does it put more of the talent's attention on
+the camera, and less on the screen?* If it adds something to read, or a control to learn, it
+does not fit.
+
+⚠️ **"Prompting" in this repo always means teleprompter craft — never LLM prompt engineering.**
+
+Background: [docs/concept.md](docs/concept.md) · origin brainstorm
 [Captain's Log B421](docs/source/b421-2026-08-19-plaud.md).
-
-**The test, when a feature argument comes up:** *does it let David look at the camera for
-longer?* If it adds something to read, it does not fit.
 
 ---
 
@@ -23,8 +31,12 @@ Kybernesis Phase 1 scripts. That is all it is, deliberately.
 
 **Explicitly NOT built, and not to be added without asking:**
 the AI layer (live listening, waffle detection, sync-to-voice, trigger rewriting),
-FliHub recording integration, per-section clip capture, and script authoring/editing.
-Column 1 is a display column — nothing generates those headings automatically.
+any recording or clip capture, and script editing. Column 1 is a display column — nothing
+generates those headings automatically.
+
+Recording is not ours and never will be: the talent drives Ecamm, FliHub watches the folder
+and queues the takes. Script editing arrives by making the app **drivable** by an agent, not
+by growing an editor — see the North Star.
 
 ## Running it
 
