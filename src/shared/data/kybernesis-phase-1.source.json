@@ -1,0 +1,507 @@
+[
+  {
+    "n": 1,
+    "t": "What Kybernesis actually builds",
+    "one": "The introduction video — the one you'd send someone who has never heard the name.",
+    "desc": [
+      "You to camera, explaining the company in the plainest terms available: Kybernesis builds full agent systems, and it starts by building one agent that's genuinely worth having. This is the video that has to work for someone with zero context, so it carries the most weight of the twelve.",
+      "On screen: one agent appears first, then a shared foundation slides in underneath it, then further specialist agents connect to that same foundation. That single diagram is doing most of the explaining."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Give the clearest possible introductory explanation of the company."
+      ],
+      [
+        "Core message",
+        "Kybernesis builds full agent systems, starting with one high-value agent. It does not simply install a chatbot."
+      ],
+      [
+        "Suggested problem",
+        "Companies often begin with a small AI assistant that can answer questions but cannot take governed responsibility across real workflows."
+      ],
+      [
+        "Explanation",
+        "Kybernesis starts with one useful agent, then uses a shared foundation for memory, permissions, tools and coordination so more specialist agents can be added over time."
+      ],
+      [
+        "Visual idea",
+        "One useful agent appears first, followed by a shared foundation and then additional specialist agents connecting to it."
+      ],
+      [
+        "Desired takeaway",
+        "“We can start small without thinking small.”"
+      ]
+    ],
+    "note": "One of Tom's two proof-batch picks — if you do a small batch first, this is one of the two.",
+    "voice": [
+      "So here's a question — you've got an AI assistant at work, and it can answer just about anything you ask it, but can it actually go and do the job? That's the gap we keep running into.",
+      "What Kybernesis builds is a full agent system. And I'll gloss that, because agent is one of those words everyone uses differently — an agent is just software that can take an action on your behalf, not only answer a question.",
+      "Now the way we start is with one agent, solving one problem that's genuinely worth solving. But underneath it we put a shared foundation — memory, permissions, tools, coordination. And that's the bit that actually matters, because once that foundation is there, the second agent and the third agent plug into it rather than starting over.",
+      "So you get to start small without thinking small. That's really the whole idea."
+    ]
+  },
+  {
+    "n": 2,
+    "t": "Why AI pilots become dead ends",
+    "one": "The trust-builder — it names the bad experience the viewer has probably already had.",
+    "desc": [
+      "You to camera explaining why the AI pilot that impressed everyone in spring is quietly unused by autumn. This one earns credibility by describing the viewer's own history back to them before offering anything.",
+      "On screen: an isolated pilot box on one side, and on the other, a first agent attached to a reusable foundation. The contrast is the entire argument."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Explain why apparently successful experiments often fail to become operational systems."
+      ],
+      [
+        "Core message",
+        "Many pilots are built as isolated demonstrations rather than as the first part of an expandable agent system."
+      ],
+      [
+        "Suggested problem",
+        "The pilot works, but it has no durable memory, governance, clear permissions or path to add further agents."
+      ],
+      [
+        "Explanation",
+        "The first use case should create value immediately while sitting on foundations that can support the next use case."
+      ],
+      [
+        "Visual idea",
+        "Contrast an isolated pilot box with a first agent attached to a reusable company foundation."
+      ],
+      [
+        "Desired takeaway",
+        "“The architecture of the first agent determines whether the next one is an extension or a restart.”"
+      ]
+    ],
+    "voice": [
+      "Do you ever get that thing where the AI pilot went really well, everyone was impressed, and then six months later nobody's using it?",
+      "That happens a lot, and it's usually not because the technology failed. It's because the pilot was built as a demo. Now a demo is fine — but a demo has no durable memory, it's got no real permissions model, and there's no path to add a second use case.",
+      "So when someone asks for the next thing, you're not extending anything. You're starting again.",
+      "What we'd do differently is build that first use case so it earns its keep straight away, but sits on foundations you can actually build on. Same first project, very different second project. The architecture of the first agent is what decides whether the next one is an extension or a restart."
+    ]
+  },
+  {
+    "n": 3,
+    "t": "Why agents need governed memory",
+    "one": "The data-governance video — aimed at whoever will ask “where does our information go?”",
+    "desc": [
+      "You to camera on the most misunderstood part of the pitch: an agent needs to remember, but “remembers everything” is the wrong goal and a slightly alarming one. The job here is to make memory sound controlled rather than accumulative.",
+      "On screen: temporary chat context evaporating, then the contrast — selected knowledge passing into a governed memory layer. Tom is explicit that this must not read as unlimited data retention."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Explain the practical need for agent memory without making it sound like unlimited data retention."
+      ],
+      [
+        "Core message",
+        "An enterprise agent must retain the right context over time while remembering only what it is permitted and useful to remember."
+      ],
+      [
+        "Suggested problem",
+        "Without durable memory, agents lose context between interactions. Without governance, they may retain the wrong information or expose it inappropriately."
+      ],
+      [
+        "Explanation",
+        "Governed memory gives agents continuity while controlling what is stored, who can use it and how it is organised."
+      ],
+      [
+        "Visual idea",
+        "Show temporary chat context disappearing, then contrast it with selected knowledge entering a governed memory layer."
+      ],
+      [
+        "Desired takeaway",
+        "“Useful memory is not just persistent. It is structured and controlled.”"
+      ]
+    ],
+    "voice": [
+      "Let's talk about memory, because I think it's the most misunderstood bit of all of this. When people hear the agent remembers, they often hear the agent keeps everything — and that's not what we want at all.",
+      "Here's the problem. Without memory, your agent forgets the context every single time, so you're re-explaining your business on every interaction. But with unrestricted memory, it might hold on to things it shouldn't, or surface them to someone who shouldn't see them.",
+      "So governed memory is the middle path. And governed just means there are rules — what gets stored, who's allowed to use it, and how it's organised. The agent gets continuity, and you keep control of what it's actually retaining.",
+      "Useful memory isn't just memory that persists. It's memory that's structured and controlled."
+    ]
+  },
+  {
+    "n": 4,
+    "t": "What Arcana does",
+    "one": "The named-product video — for the person who hears “Arcana” in a meeting and looks it up.",
+    "desc": [
+      "You to camera giving Arcana, the memory layer, its own standalone explanation. Because it's a product name rather than a concept, this one has to stand completely alone — someone will land on it with no idea what Kybernesis is.",
+      "On screen: information from permitted sources becoming structured organisational memory, then being retrieved by the right agent at the moment it's needed."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Give Arcana its own simple foundational explanation."
+      ],
+      [
+        "Core message",
+        "Arcana is the durable, structured memory layer that gives agents appropriate organisational context over time."
+      ],
+      [
+        "Suggested problem",
+        "A model can answer from what is in front of it, but a working enterprise agent needs continuity, relevant history and a way to retrieve the right context."
+      ],
+      [
+        "Explanation",
+        "Arcana organises and retrieves governed knowledge so an agent can act with useful context without treating every conversation or file as one undifferentiated memory."
+      ],
+      [
+        "Visual idea",
+        "Information from permitted sources becomes structured organisational memory and is retrieved by the right agent when required."
+      ],
+      [
+        "Desired takeaway",
+        "“Arcana helps an agent remember the right things in a useful, governed form.”"
+      ]
+    ],
+    "note": "This is the one most likely to need real product screens. Tom's own handover checklist lists “product-screen access” as something he still owes you — worth naming in your reply if it blocks you.",
+    "voice": [
+      "So what is Arcana? Arcana is the memory layer that sits underneath the agents.",
+      "Here's the thing a model on its own does really well — it can answer from whatever's in front of it right now. What it can't do is remember your organisation. It doesn't know what was decided last quarter, or which client this relates to, or what your team already tried and ruled out.",
+      "Arcana is where that lives. And the important word is structured, because it's not one big pile of every document and conversation you've ever had — that's not actually retrievable when you need it. It organises the knowledge so the right agent can pull the right context at the moment it needs it, and only within what it's permitted to see.",
+      "So the agent remembers the right things, in a form that's actually useful."
+    ]
+  },
+  {
+    "n": 5,
+    "t": "Why one assistant isn't a system",
+    "one": "The objection-handler — “we already have Copilot, why would we need you?”",
+    "desc": [
+      "You to camera drawing the line between a single AI assistant and an agent system. This is the competitive video: it has to acknowledge that a general assistant is genuinely useful before explaining what it can't do.",
+      "On screen: one overloaded assistant replaced by several clearly labelled specialist agents. Tom's framing is deliberately non-dismissive — the assistant isn't bad, it's just being asked to be everything."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Separate the common idea of an assistant from Kybernesis’s system approach."
+      ],
+      [
+        "Core message",
+        "One assistant can answer broadly. A full agent system separates responsibilities, context, permissions and tools among specialist agents."
+      ],
+      [
+        "Suggested problem",
+        "Asking one assistant to know everything and do everything creates overloaded context, unclear responsibility and excessive access."
+      ],
+      [
+        "Explanation",
+        "A well-designed system gives different agents specific jobs and lets them collaborate through controlled handoffs."
+      ],
+      [
+        "Visual idea",
+        "A single overloaded assistant is replaced by several clearly labelled specialist agents."
+      ],
+      [
+        "Desired takeaway",
+        "“A company does not need one AI that can see everything. It needs the right agents doing the right jobs.”"
+      ]
+    ],
+    "voice": [
+      "Now you might be thinking, we've already got an AI assistant, so aren't we done? And it's a fair question.",
+      "One assistant can answer very broadly, and that's genuinely useful — I use one every day. But if you ask that one assistant to know everything and do everything, a couple of things start to go wrong.",
+      "Its context gets overloaded, so it gets vaguer. Responsibility gets fuzzy — when something comes out wrong, which part was wrong? And access creeps, because to do everything, it needs to see everything.",
+      "What a full agent system does instead is split the work up. Different agents, specific jobs, the context and the permissions each one actually needs, and controlled handoffs between them.",
+      "So it's not that you need one AI that can see everything. You need the right agents doing the right jobs."
+    ]
+  },
+  {
+    "n": 6,
+    "t": "What an orchestrator agent does",
+    "one": "The most abstract of the twelve — it leans hardest on its diagram.",
+    "desc": [
+      "You to camera explaining the coordinating agent: the one that receives a request, works out where it belongs, routes it, and reassembles the permitted results into a single answer. There's no everyday equivalent to point at, which makes it the hardest of the set to make concrete.",
+      "On screen: one request enters, splits into permitted specialist tasks, returns as one coordinated response. Budget the most time here for getting the animation right."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Explain the coordinating role inside a multi-agent system."
+      ],
+      [
+        "Core message",
+        "An orchestrator receives a request, decides where the work belongs, routes it to the appropriate specialists and combines the permitted results."
+      ],
+      [
+        "Suggested problem",
+        "A user should not need to understand which agent, tool or data source is required for every request."
+      ],
+      [
+        "Explanation",
+        "The orchestrator manages the handoffs while each specialist remains responsible for its defined work."
+      ],
+      [
+        "Visual idea",
+        "One request enters, splits into permitted specialist tasks and returns as one coordinated response."
+      ],
+      [
+        "Desired takeaway",
+        "“The user gets one coherent interaction without turning every agent into an all-access generalist.”"
+      ]
+    ],
+    "voice": [
+      "So if you've got a handful of specialist agents, there's an obvious question — how does anyone know which one to ask? And the answer is, they shouldn't have to.",
+      "That's what an orchestrator does. An orchestrator is just an agent whose job is coordination rather than doing the work itself. A request comes in, it works out where that work actually belongs, it sends it off to the right specialists, and then it puts the permitted results back together into one answer.",
+      "So from the outside it looks like one conversation. Underneath, three or four agents each did their own piece, each staying inside its own responsibility and its own permissions.",
+      "The person asking gets one coherent interaction — and you haven't had to turn every agent into an all-access generalist to get it."
+    ]
+  },
+  {
+    "n": 7,
+    "t": "Why specialist agents stay cleaner",
+    "one": "The engineering-lead video — the technical case for splitting agents up.",
+    "desc": [
+      "You to camera on why several small agents outperform one large one. This is the most technical of the twelve and the one most likely to be forwarded to an engineering lead for a second opinion, so accuracy matters more than polish here.",
+      "On screen: one cluttered context window resolving into several smaller, clearly bounded contexts."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Explain the operational benefit of specialist agents."
+      ],
+      [
+        "Core message",
+        "Smaller responsibility boundaries produce cleaner context, more predictable behaviour and better control."
+      ],
+      [
+        "Suggested problem",
+        "A single agent carrying sales, finance, support and operational context becomes difficult to govern and easier to confuse."
+      ],
+      [
+        "Explanation",
+        "Specialist agents work within narrower domains, using the context and tools appropriate to their responsibilities."
+      ],
+      [
+        "Visual idea",
+        "One cluttered context window becomes several smaller, clearly bounded contexts."
+      ],
+      [
+        "Desired takeaway",
+        "“Specialisation makes an agent system easier to understand, control and improve.”"
+      ]
+    ],
+    "voice": [
+      "Let's have a look at why we split agents up, because on the face of it, one agent sounds simpler.",
+      "Here's what happens in practice. If you've got one agent carrying sales, and finance, and support, and operations all at the same time, its context fills up with things that aren't relevant to the question in front of it. And that makes it vaguer and less predictable — not because it's a bad model, just because you've handed it too much at once.",
+      "It's also very hard to govern, because to do all of that, it needs access to all of it.",
+      "Now if you narrow each agent down to one domain, the context stays clean, the behaviour gets more predictable, and permissions become a lot more straightforward.",
+      "So specialisation isn't complexity for its own sake. It's what makes the system possible to understand, control and improve."
+    ]
+  },
+  {
+    "n": 8,
+    "t": "Collaboration without exposing data",
+    "one": "The security objection — and the most concrete brief of the twelve.",
+    "desc": [
+      "You to camera walking one specific scenario end to end: a sales agent needs a commercial decision that depends on restricted finance data. The finance agent looks, and returns only the verdict. The sales agent never sees the numbers.",
+      "This is the only brief where Tom supplies an actual named scenario rather than a general problem, which makes it the easiest of the twelve to script and a strong early candidate if you want a quick win."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Demonstrate permission-aware agent collaboration with a concrete example."
+      ],
+      [
+        "Core message",
+        "Agents can contribute to the same workflow without every agent gaining access to all of the underlying data."
+      ],
+      [
+        "Suggested scenario",
+        "A sales agent needs to know whether a commercial action is allowed, but it should not see detailed restricted finance data."
+      ],
+      [
+        "Explanation",
+        "The finance agent accesses the permitted finance information and returns only the result the sales workflow is authorised to use. The sales agent never receives the restricted source data."
+      ],
+      [
+        "Visual idea",
+        "The sales agent requests a decision; the finance agent checks restricted data behind a permission boundary and returns an approved, limited result."
+      ],
+      [
+        "Desired takeaway",
+        "“Collaboration does not require universal access.”"
+      ]
+    ],
+    "voice": [
+      "Here's a concrete one, because I think this is where it clicks.",
+      "Say your sales agent needs to know whether it can offer a particular discount. Now that's genuinely a finance question. But you really don't want your sales agent reading the finance data to answer it.",
+      "So what happens instead is the sales agent asks the finance agent. The finance agent looks at the restricted data — which it is allowed to see — and it sends back the answer, and only the answer. Approved, or not approved.",
+      "The sales agent never receives the underlying numbers. It never had access to them at any point in that exchange.",
+      "And that's really the pattern for the whole system. Agents can work the same job together without every agent needing to see everything. Collaboration doesn't require universal access."
+    ]
+  },
+  {
+    "n": 9,
+    "t": "What a control plane governs",
+    "one": "The IT and governance video — six things, one layer.",
+    "desc": [
+      "You to camera on the administrative layer sitting above the agents: identity, permissions, tools, memory, routing and oversight. This is the video that answers “who is in charge of these things”, and it's aimed squarely at whoever has to sign off on the risk.",
+      "On screen: a control layer sitting above those six named domains. The six are worth showing as an explicit list — it's a rare case where the diagram is essentially the script."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Explain the system-level controls that make enterprise agents manageable."
+      ],
+      [
+        "Core message",
+        "The control plane governs who the agents are, what they may access, which tools they may use, what they remember, how work is routed and how activity is overseen."
+      ],
+      [
+        "Suggested problem",
+        "A collection of agents without central controls becomes difficult to secure, audit and expand."
+      ],
+      [
+        "Explanation",
+        "The control plane provides consistent governance across the agent system instead of relying on one-off rules inside every workflow."
+      ],
+      [
+        "Visual idea",
+        "A control layer sits above identity, permissions, tools, memory, routing and oversight."
+      ],
+      [
+        "Desired takeaway",
+        "“Enterprise AI needs a system of control, not just a collection of prompts.”"
+      ]
+    ],
+    "voice": [
+      "So once you've got more than one agent running, you've got a management problem — and this is the part that tends to get skipped.",
+      "A control plane is the layer that governs the whole set. And it covers six things: who each agent is, what it's allowed to access, which tools it can use, what it's permitted to remember, how work gets routed, and how you oversee what actually happened.",
+      "Now the alternative is that all of that lives as one-off rules scattered inside individual workflows. And that works fine for one agent. It stops working somewhere around the third, because there's no single place to check anything, change anything, or audit anything.",
+      "So the control plane is really about being able to answer one question in one place — what can this thing do, and who said so.",
+      "Enterprise AI needs a system of control, not just a collection of prompts."
+    ]
+  },
+  {
+    "n": 10,
+    "t": "Why agents belong in Slack or Teams",
+    "one": "The adoption video — and the one that tests your variant workflow.",
+    "desc": [
+      "You to camera on why the interface decides whether anyone actually uses the thing. Then the same core explanation rendered twice: once with Slack on screen, once with Teams.",
+      "Tom picked this as the second proof-batch video specifically because it tests whether you can produce two variants from one recording — so the real deliverable here is as much about your production system as the content."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Explain why the interface matters to adoption."
+      ],
+      [
+        "Core message",
+        "People are more likely to use agents when the agents are available inside tools where work already happens."
+      ],
+      [
+        "Suggested problem",
+        "A new standalone interface adds another destination, another habit and another source of friction."
+      ],
+      [
+        "Explanation",
+        "An employee can request work or receive an authorised update through Slack or Teams while the agent system handles memory, tools, permissions and routing behind the interface."
+      ],
+      [
+        "Variants",
+        "Produce a Slack version and a Teams version from the same core A-roll where practical."
+      ],
+      [
+        "Visual idea",
+        "The same request is made through Slack and Teams, with the governed system operating behind both."
+      ],
+      [
+        "Desired takeaway",
+        "“The agent can fit the way the team already works.”"
+      ]
+    ],
+    "note": "“Where practical” is Tom leaving the variant method to you — he is not specifying whether that means one take reused, or two takes recorded. That call, and its cost, is one of the six things he wants back.",
+    "voice": [
+      "So here's something we see again and again — the agent works fine, and people still don't use it. And usually the reason is just friction. It's another tab, another login, another habit somebody has to build.",
+      "Now the fix is pretty simple. Put the agent where the work already happens.",
+      "So someone asks for what they need in Slack, in the channel they're already sitting in, and the answer comes back to them right there. And behind that, nothing has changed — same memory, same permissions, same routing, same specialist agents doing the work. All that's different is the doorway.",
+      "And it's exactly the same story in Teams.",
+      "So the agent fits the way your team already works, instead of asking your team to work a new way just to reach it."
+    ]
+  },
+  {
+    "n": 11,
+    "t": "The manager's morning briefing",
+    "one": "The most relatable of the twelve — a department head will see themselves in it.",
+    "desc": [
+      "You to camera walking through a manager's morning: instead of chasing updates across systems and people, a short briefing is already waiting, with the exceptions flagged. Of all twelve this is the one where the viewer most easily pictures their own day.",
+      "On screen: several permitted sources feeding specialist checks, converging into one short briefing with priorities and red flags."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Show an understandable, high-value management use case."
+      ],
+      [
+        "Core message",
+        "Agents can gather permitted operational information, identify exceptions and prepare a concise briefing focused on what needs attention."
+      ],
+      [
+        "Suggested problem",
+        "Managers spend the beginning of each day chasing updates across systems and departments before they know where intervention is required."
+      ],
+      [
+        "Explanation",
+        "Specialist agents review their permitted areas, flag exceptions and send an orchestrated briefing containing the useful summary and red flags."
+      ],
+      [
+        "Visual idea",
+        "Several permitted sources feed specialist checks, then a short morning briefing arrives with priorities and exceptions."
+      ],
+      [
+        "Desired takeaway",
+        "“The manager starts with the important decisions, not an hour of information gathering.”"
+      ]
+    ],
+    "voice": [
+      "Let's do a practical one. Think about how a manager's morning usually starts — pinging three people, opening four systems, and building a picture in your head before you even know where you're actually needed.",
+      "So what would we do instead? Overnight, each specialist agent looks at its own patch — whatever it's permitted to see. One's watching operations, one's watching the numbers, one's watching support. And each one flags anything that looks like an exception.",
+      "Then the orchestrator pulls all of that together into one short briefing, and that's what's waiting for you when you sit down. Not a data dump — the summary, and the red flags.",
+      "So you start your day on the decisions, rather than spending the first hour working out which decisions there are."
+    ]
+  },
+  {
+    "n": 12,
+    "t": "Start with one, design for the system",
+    "one": "The closer — what to actually do on Monday morning.",
+    "desc": [
+      "You to camera closing the foundational set with the recommended way in: pick one use case that matters, prove it, but build it on foundations a larger system would need anyway. This is the video that asks for the next step.",
+      "On screen: one valuable use case proving itself, then new specialist agents being added around the same foundation. It deliberately mirrors Video 1's diagram — the set opens and closes on the same picture."
+    ],
+    "tom": [
+      [
+        "Purpose",
+        "Finish the foundational set with the recommended implementation approach."
+      ],
+      [
+        "Core message",
+        "The first agent must earn its place by solving a valuable problem, but the surrounding design should make the second and third agents easier to add."
+      ],
+      [
+        "Suggested problem",
+        "Starting too broadly creates an expensive programme before value is proven. Starting with an isolated tool creates a dead end."
+      ],
+      [
+        "Explanation",
+        "Choose one meaningful use case, prove the value, and place it on the memory, permissions, tool and orchestration foundations required for expansion."
+      ],
+      [
+        "Visual idea",
+        "One valuable use case proves itself, then new specialist agents are added around the same foundation."
+      ],
+      [
+        "Desired takeaway",
+        "“Prove value with one agent. Build the path to the full system from day one.”"
+      ]
+    ],
+    "voice": [
+      "So, to recap the whole approach — how should you actually start?",
+      "There are two ways to get this wrong. You can start too broadly, and end up with an expensive programme running for months before anybody's seen any value. Or you can start with an isolated little tool that works fine and goes absolutely nowhere.",
+      "What we'd recommend is neither. Pick one use case that genuinely matters — something where you can point at the value and everyone agrees it's real. Build that. But build it on the memory, the permissions, the tools and the orchestration that a bigger system was going to need anyway.",
+      "So the first agent proves itself on its own merits, and the second and third are additions rather than rebuilds.",
+      "Prove value with one agent, and build the path to the full system from day one."
+    ]
+  }
+]

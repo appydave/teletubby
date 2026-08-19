@@ -31,8 +31,24 @@ verbatim. The fix isn't a better script — it's needing less of it on screen.
 
 ## Status
 
-🌱 **Seed.** No code yet. This repo currently holds the concept, the source
-brainstorm, and the open questions.
+🔬 **Working proof of concept.** An AppyTron (Electron) desktop app with the three-column
+reading surface and keyboard navigation over the twelve real Kybernesis Phase 1 scripts.
+
+```bash
+npm install && npm run dev
+```
+
+| Key | Does |
+|---|---|
+| `↑` `↓` `Space` | step the triggers — clamped inside the script, never crosses into the next |
+| `←` `→` | which column: bullets · both · script |
+| click a chip | which script (deliberately not on the keyboard) |
+| `M` | mirror, for prompter glass |
+| `D` | focus — dim everything but the current beat |
+| `F` | fullscreen |
+
+**Not built:** the AI layer, FliHub recording, clip capture, script authoring. Column 1 is
+a display column; nothing generates those headings automatically.
 
 ## Docs
 
@@ -41,6 +57,7 @@ brainstorm, and the open questions.
 | [docs/concept.md](docs/concept.md) | The three-column model, the AI layer, FliHub integration |
 | [docs/open-questions.md](docs/open-questions.md) | What's genuinely unresolved — trigger words, scrolling, scope |
 | [docs/source/b421-2026-08-19-plaud.md](docs/source/b421-2026-08-19-plaud.md) | Raw origin brainstorm (Captain's Log B421) |
+| [CLAUDE.md](CLAUDE.md) | How to work on this app — the rules, the data pipeline, the gotchas |
 | [docs/prior-art-kybernesis-prompter.md](docs/prior-art-kybernesis-prompter.md) | A working two-column prompter built the day before — what it settled, what it didn't |
 
 ## Setup on another machine

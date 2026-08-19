@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   TELETUBBY — DESIGN TOKENS
+   AppyDave brand, LIGHT ONLY.
+
+   AppyDave is a light-only brand. There is exactly one palette here, and no
+   OS-theme media query or theme-attribute override exists anywhere in this
+   app — `color-scheme: light` is pinned on :root so a dark OS setting cannot
+   repaint the canvas. Tailwind's dark variant is disabled outright in
+   tailwind.config.js so it cannot creep back in via a utility class.
+
+   Every component consumes these custom properties. No component may use a
+   raw hex value.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* --- AppyDave core palette (complete set — undefined vars = invisible text) */
+  --brand-brown: #342d2d;
+  --brand-gold: #ccba9d;
+  --brand-yellow: #ffde59;
+  --brand-amber: #c8841a;
+  --brand-muted: #7a6e5e;
+  --brand-near-white: #faf5ec;
+  --brand-surface: #f0ebe4;
+  --brand-linen: #e8e0d4;
+  --brand-border: #d4cdc4;
+  --brand-chrome: #1a1515;
+  --brand-dark-surface: #25201e;
+  --brand-blue: #2e91fc;
+
+  /* --- Semantic surfaces */
+  --tt-canvas: var(--brand-near-white);
+  --tt-panel: var(--brand-surface);
+  --tt-card: var(--brand-linen);
+  --tt-border: var(--brand-border);
+  --tt-chrome: var(--brand-chrome);
+
+  /* --- Semantic text */
+  --tt-text: var(--brand-brown);
+  --tt-text-muted: var(--brand-muted);
+  --tt-text-on-dark: var(--brand-near-white);
+
+  /* --- Column ranking.
+     The lane you are DRIVING carries the strong yellow marker; the follower
+     lane carries the quieter gold one. Two equally-loud markers read as two
+     competing claims about where you are — see
+     docs/prior-art-kybernesis-prompter.md §5. */
+  --tt-driven: var(--brand-yellow);
+  --tt-driven-wash: #fff8dd;
+  --tt-follower: var(--brand-gold);
+  --tt-follower-wash: #f4eee3;
+
+  /* --- Sequence accent (script numbers) — amber, never yellow. */
+  --tt-sequence: var(--brand-amber);
+
+  /* --- Opaque stand-ins for what would otherwise need alpha modifiers.
+     Tailwind cannot apply an opacity modifier to a plain `var(--x)` colour —
+     the utility is silently dropped and the element renders with no colour at
+     all. These are declared as real values so that never happens. */
+  --tt-veil: #faf5ecf0;          /* cue-card backdrop over the stage */
+  --tt-lane-alt: #f7f2e8;        /* transcript lane, a shade off the canvas */
+  --tt-border-strong: #b9ad9c;   /* selected chips + primary button edge */
+
+  /* --- Type scale, driven by the three named presets below. */
+  --tt-scale: 1;
+  --tt-bullet-size: calc(1.375rem * var(--tt-scale));
+  --tt-script-size: calc(1.0625rem * var(--tt-scale));
+  --tt-topic-size: calc(0.875rem * var(--tt-scale));
+
+  --tt-font-display: 'Oswald', 'Roboto Condensed', 'Avenir Next Condensed', system-ui, sans-serif;
+  --tt-font-body: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --tt-font-mono: 'Roboto Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+/* Three named text presets — one decision before the take, not a ±stepper you
+   fiddle with mid-recording (prior-art §7.6). */
+:root[data-text='standard'] {
+  --tt-scale: 1;
+}
+:root[data-text='large'] {
+  --tt-scale: 1.28;
+}
+:root[data-text='stage'] {
+  --tt-scale: 1.62;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--tt-canvas);
+  color: var(--tt-text);
+  font-family: var(--tt-font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   WINDOW DRAG REGION
+
+   window-manager.ts uses `titleBarStyle: 'hiddenInset'` on macOS, which removes
+   the native title bar. Electron then draws NO draggable area at all unless the
+   page declares one — so without this the window cannot be moved, and dragging
+   the header selects text instead. Every element inside a drag region that a
+   user needs to click (button, input, scrollable lane) must opt back out with
+   `.tt-no-drag`, or the click is swallowed by the drag handler.
+   ========================================================================== */
+
+.tt-drag {
+  -webkit-app-region: drag;
+  /* Clear the traffic lights, which float over the content with hiddenInset. */
+  padding-left: 78px;
+}
+
+.tt-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Mirror mode for prompter glass. One transform, in v1 — not deferred
+   (prior-art §7.5). Applied to the stage only, so the chrome stays readable. */
+.tt-mirror {
+  transform: scaleX(-1);
+}
+
+.tt-lane-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--tt-border) transparent;
+}
+.tt-lane-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.tt-lane-scroll::-webkit-scrollbar-thumb {
+  background: var(--tt-border);
+  border-radius: 999px;
+}
+
+/* The end card nudges instead of advancing when you press past the last beat. */
+@keyframes tt-nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(6px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+.tt-nudge {
+  animation: tt-nudge 260ms ease-in-out;
+}
+
+@keyframes tt-cue-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.tt-cue {
+  animation: tt-cue-in 140ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tt-nudge,
+  .tt-cue {
+    animation: none;
+  }
+}
