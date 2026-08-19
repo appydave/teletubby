@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "description": "Three-column glance-based teleprompter — topic, trigger words, transcript.",
   "private": true,
+  "packageManager": "npm@11.11.0",
   "type": "module",
   "main": "./out/main/index.js",
+  "bin": {
+    "teletubby": "./bin/teletubby.mjs"
+  },
   "author": "David Cruwys",
   "license": "MIT",
   "scripts": {

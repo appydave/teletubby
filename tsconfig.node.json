@@ -11,10 +11,14 @@
     "resolveJsonModule": true,
     "types": ["node", "electron-vite/node"],
     "baseUrl": ".",
-    "paths": { "@shared/*": ["src/shared/*"] }
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@core/*": ["src/core/*"]
+    }
   },
   "include": [
     "src/main/**/*",
+    "src/core/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
     "electron.vite.config.ts"

@@ -3,7 +3,10 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   resolve: {
-    alias: { '@shared': resolve('src/shared') },
+    alias: {
+      '@shared': resolve('src/shared'),
+      '@core': resolve('src/core'),
+    },
   },
   test: {
     environment: 'node',

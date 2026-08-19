@@ -3,9 +3,11 @@
 **Status:** draft. A doubt-driven pass has run over it — its findings are folded in, and the two
 it changed are marked in Open Questions §6 and under Boundaries. Not yet a build contract.
 
-**This is a brownfield spec.** A working proof of concept already ships — the three-column reading
-surface with keyboard navigation over the twelve Kybernesis scripts, 38 tests passing. This document
-specifies the *next* state, and marks throughout what is **built** versus **specified**.
+**This is a brownfield spec.** Session 1 (schema + control API) has landed: the domain model, the
+capability core, the loopback control surface on 7111, the CLI, and the deterministic cadence gate.
+146 tests passing. The three-column reading surface still runs on the legacy flat data and has not
+been migrated onto the domain model — that is session 2. This document marks throughout what is
+**built** versus **specified**.
 
 **Inputs, not questions.** Direction is settled in [north-star.md](north-star.md) (interviewed and
 ratified 2026-08-19) and behaviour in [requirements.md](requirements.md). Nothing here reopens
@@ -39,12 +41,11 @@ Scaffolded from `create-appytron`, matched to ImageDrip.
 | Language | TypeScript 5.7, strict, two tsconfigs (node / web) |
 | Core | `@appydave/core` ^0.1.0 — Lifecycle · Config · Logger · Store |
 | Tests | Vitest 2.1, node environment |
-| Ports | **7110** renderer dev server (`strictPort`), 7111 reserved. Registered in `apps.json`. |
+| Ports | **7110** renderer dev server (`strictPort`), **7111** the loopback control API. Both registered in `apps.json`. |
 
-⚠️ **`packageManager` is not pinned, and it should be.** ImageDrip pins `npm@11.11.0` because pnpm
-10+ blocks postinstall, and Electron's postinstall is what downloads the Electron binary — `pnpm
-install` yields a package with no Electron in it and fails later, confusingly. Teletubby has the
-same shape and no guard. See Open Questions.
+✅ **`packageManager` is pinned to `npm@11.11.0`.** pnpm 10+ blocks postinstall, and Electron's
+postinstall is what downloads the Electron binary — `pnpm install` yields a package with no Electron
+in it and fails later, confusingly. ImageDrip paid for this once; Teletubby now has the guard.
 
 ## Commands
 
@@ -61,13 +62,25 @@ Test watch: npm run test:watch
 Typecheck:  npm run typecheck           # node + web
 Format:     npm run format              # prettier --write .
 
-Regen data: npm run build:data          # rebuilds src/shared/scripts.ts
+Regen data: npm run build:data          # rebuilds script-set.ts AND scripts.ts
+
+Drive it:   teletubby health             # app up? (no token)
+            teletubby capabilities       # every verb + contract
+            teletubby call <name> --input '<json>'
 ```
 
 ## Project Structure
 
 ```
 src/main/          Electron main — window, IPC router, console lifecycle
+  └── control-server.ts  the loopback HTTP adapter (7111). ADAPTER ONLY, no logic
+src/core/          THE CAPABILITY CORE — the only place business logic lives
+  ├── index.ts       createCore + invoke: the one entry point every adapter uses
+  ├── handlers.ts    the verb implementations
+  ├── safety.ts      THE GATE — principals, confirmations, idempotency, rate, audit
+  ├── repository.ts  persistence (memory for tests, atomic JSON on disk)
+  ├── cadence.ts     the score.py port — eight deterministic rules
+  └── active-context.ts  the expiring ambient selection
 src/preload/       The ONLY renderer↔main door; exposes window.appytron
 src/renderer/src/  React app
   ├── App.tsx        chrome, keyboard map, stage composition
@@ -75,10 +88,14 @@ src/renderer/src/  React app
   ├── index.css      design tokens (the single source of colour)
   └── components/    Lanes · CueOverlay · EndCard
 src/shared/        Types and data crossing the boundary
+  ├── domain.ts      THE DOMAIN — shapes, zod schemas, structural rules
+  ├── capabilities.ts  THE CATALOG — every verb, with its contract and metadata
   ├── ipc.ts         the typed IPC contract
-  ├── scripts.ts     GENERATED — do not edit by hand
+  ├── script-set.ts  GENERATED — the domain model. Do not edit by hand
+  ├── scripts.ts     GENERATED — legacy flat view for the renderer. Removed in session 2
   └── data/          the verbatim Phase 1 source JSON
-scripts/           build-scripts-data.mjs — authors scripts.ts
+bin/teletubby.mjs  the CLI — a fetch() wrapper, deliberately stupid
+scripts/           build-scripts-data.mjs + authored-domain.mjs — author both generated files
 test/              Vitest specs
 docs/              north-star · requirements · this spec · kdd/ · prior-art
 ```
@@ -109,12 +126,18 @@ const markerBar = (rank: Rank, active: boolean): string => {
 
 ## Testing Strategy
 
-Vitest, node environment, specs in `test/`. **38 passing today.**
+Vitest, node environment, specs in `test/`. **146 passing today.**
 
 | Level | What it covers | Where |
 |---|---|---|
-| **Data invariants** | The authored bullet→paragraph maps: length matches step count, no index past the last paragraph, monotonically non-decreasing, spans the whole script | `test/scripts-data.test.ts` |
-| **Navigation rules** | Clamping, boundary refusal, lane track, cue cards, toggles — driven through the store with no DOM | `test/prompter-navigation.test.ts` |
+| **Data invariants (legacy)** | The authored bullet→paragraph maps on the flat shape | `test/scripts-data.test.ts` |
+| **Domain rules** | Both corpora present, two heading levels, per-style maps, provenance/cadence distinction, and every structural rule a schema cannot express | `test/domain.test.ts` |
+| **Navigation rules** | Clamping, boundary refusal, lane track, cue cards, toggles — through the store with no DOM | `test/prompter-navigation.test.ts` |
+| **The published surface** | The exact verb set per principal, pinned. Every verb has a handler and every handler is published | `test/capability-surface.test.ts` |
+| **Capability behaviour** | The verbs doing their jobs, especially `write_trigger_set` | `test/capabilities.test.ts` |
+| **Agent safety** | Principal narrowing, preview→confirm→execute, idempotency, rate limiting, audit, ambient-context expiry | `test/agent-safety.test.ts` |
+| **The control surface** | Real HTTP: token auth, status-code mapping, loopback binding, discovery file | `test/control-server.test.ts` |
+| **Cadence gate** | Per-document parity with `score.py` on all three Kybernesis pairs | `test/cadence-gate.test.ts` |
 | **Scaffold primitives** | FileAuthor, ProcessSupervisor | inherited from AppyTron |
 
 **Coverage expectation is not a percentage.** The rule: **every rule in requirements.md that can be
@@ -128,7 +151,7 @@ are settled by recording takes. A green suite says the mechanism works, never th
 
 **Always:**
 - Run `npm test` and `npm run typecheck` before committing
-- Regenerate `scripts.ts` via `npm run build:data` — never hand-edit it
+- Regenerate `script-set.ts` and `scripts.ts` via `npm run build:data` — never hand-edit either
 - Consume design tokens; verify `grep -rc "prefers-color-scheme" src/` returns `0` on every file
 - Keep navigation rules in the store, and add a test with the rule
 - Record a learning in `docs/kdd/learnings/` when something costs more than an hour
@@ -139,6 +162,8 @@ are settled by recording takes. A green suite says the mechanism works, never th
   the main process with results crossing the typed IPC bridge. Relaxing the renderer CSP to reach
   FliHub directly is the wrong fix and is not approved.
 - Changing the keyboard map, the port, or the IPC surface
+- **Adding or re-scoping a capability.** Both gates below apply, and
+  `test/capability-surface.test.ts` fails until the published set is updated deliberately
 - Any change to the zone model, the camera rule, or the trigger styles — those are ruled
 - Editing files under `docs/` that carry rulings (`north-star.md`)
 
@@ -147,14 +172,45 @@ are settled by recording takes. A green suite says the mechanism works, never th
 - Record, capture, stitch, or write a video file — Teletubby owns none of that
 - Add human editing controls for scripts — editing arrives via agent tools
 - Let one key mean two scales of movement, or cross a script boundary silently
-- Hand-edit `src/shared/scripts.ts`, or derive the bullet→paragraph map positionally
+- Hand-edit a generated file, or derive the trigger→paragraph map positionally
+- Put authorization in an adapter, or a business rule in one
+- Expose `approve_pending`, `list_pending` or `set_active_context` on the agent surface
+- Bind the control server to anything but 127.0.0.1
 - Ship a feature that adds something to read
+
+### The two gates — every PR that adds or re-scopes a capability
+
+**Reachability.** A capability reachable from the UI and not headlessly *is a regression*.
+
+```markdown
+- [ ] Capability defined (typed input + output + metadata in `src/shared/capabilities.ts`)
+- [ ] Implemented once in `src/core/` — no logic in any adapter
+- [ ] Reachable headlessly (automatic, unless you made it UI-only — then say why)
+- [ ] All of the above land in THIS PR
+```
+
+**Safety.** Reachability is not safety; a capability can pass the gate above and still be
+dangerously exposed.
+
+```markdown
+- [ ] Classified: read-only / reversible-write / destructive / external-side-effect
+- [ ] Authorization enforced in `src/core/safety.ts` — NOT in an adapter, NOT in a prompt
+- [ ] Agent principal is narrower than the UI's
+- [ ] Destructive: preview/dry-run exists AND a human approves it before it acts
+- [ ] Meaningful effect: accepts an idempotency key, returns the original result on retry
+- [ ] Audit record includes principal, parameters, and prior state
+- [ ] Failure modes enumerated and distinguishable
+- [ ] Confirmation / override / approval channels are NOT on the agent surface
+- [ ] `test/capability-surface.test.ts` updated deliberately, not to make CI pass
+```
+
+Unticked boxes need a reason. "Later" is not one, and neither is "the agent won't do that".
 
 ## Success Criteria
 
 Numbered so a review can accept or reject each one independently.
 
-**Built and verified (2026-08-19)**
+**Built and verified (2026-08-19) — the proof of concept**
 1. `npm run dev` launches the Electron app; window opens; no console errors ✅
 2. All twelve scripts load and are selectable ✅
 3. Arrow/space steps triggers and the transcript stays in sync via the authored map ✅
@@ -163,6 +219,15 @@ Numbered so a review can accept or reject each one independently.
 6. `grep -rc "prefers-color-scheme" src/` returns `0`; no raw hex in components ✅
 7. 38 tests and both typechecks pass ✅
 8. The window can be dragged ✅
+
+**Built and verified (2026-08-19) — session 1: schema + control API**
+S1. The domain carries major AND minor topics, per-trigger-set maps bound to paragraph ids, and corpus as a first-class field ✅
+S2. Both corpora are loadable — Tom's originals for all twelve, plus the three re-cadenced transcripts ✅
+S3. An agent can read scripts and projects, and create/edit/write/update them, over a loopback API on 7111 reaching the same store as the UI ✅
+S4. Every verb runs through one authorization gate beneath every adapter; the agent principal is narrower than the UI's ✅
+S5. Destructive verbs preview → confirm → execute, and the approval channel is not on the agent surface ✅
+S6. The published capability set is pinned by a test ✅
+S7. `packageManager` pinned to `npm@11.11.0` ✅
 
 **Specified, not built**
 9. The talent can choose which zones are on screen, from the combinations in requirements §1 — and any chosen combination stays aligned as they move
@@ -179,6 +244,8 @@ Numbered so a review can accept or reject each one independently.
 16b. A script is scored against the talent's measured envelope **before it is put on screen**, and a
     failing script is visibly flagged or refused. Deterministic — eight threshold rules, no model, no
     transcript, no FliHub. Thresholds are per talent and never ported between talents.
+    **Half built:** the gate exists and is reachable as `score_transcript`, with per-document parity
+    against `score.py` pinned by a test. The *visible flag* is UI and waits for session 2.
 
 17. Every rule in 9–16 that can be a store assertion has a test
 
@@ -201,8 +268,8 @@ Blocking ones first.
    this is a prompter or a content tool. **Everything downstream of criterion 13 depends on it.**
 2. **Where does the app learn the camera edge?** Criterion 12 is untestable until the app knows which
    side the lens is on — talent sets it, or it is inferred from window position.
-3. **Should `packageManager` be pinned to npm now?** One line, prevents a failure ImageDrip already
-   paid for. Recommend yes.
+3. ~~**Should `packageManager` be pinned to npm now?**~~ **Done** — `npm@11.11.0`, pinned in
+   session 1.
 4. ~~**What happens on a poor Jaccard score mid-take?**~~ **Answered.** Score the script before the
    take; score a take only at its boundary. Interrupting mid-sentence fails the objective. The
    mid-take half is blocked on FliHub regardless.

@@ -6,7 +6,10 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     resolve: {
-      alias: { '@shared': resolve('src/shared') },
+      alias: {
+        '@shared': resolve('src/shared'),
+        '@core': resolve('src/core'),
+      },
     },
     build: {
       rollupOptions: { input: { index: resolve('src/main/index.ts') } },

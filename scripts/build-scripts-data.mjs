@@ -13,12 +13,21 @@
  * positionally. Deriving it proportionally was considered and rejected — the
  * boundaries do not fall evenly, and a wrong sync is worse than no sync.
  *
+ * TWO ARTIFACTS, ONE AUTHORING SOURCE
+ * This emits both `src/shared/script-set.ts` (the domain model — the source of
+ * truth from session 1 onward) and `src/shared/scripts.ts` (the flat shape the
+ * proof-of-concept renderer still reads). The second is a PROJECTION of the
+ * same authored tables, not a second source; it is scheduled for removal when
+ * the renderer moves onto the zone model in session 2.
+ *
  * Run: `npm run build:data`
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+
+import { CADENCE, MAJORS, SET, TALENTS } from './authored-domain.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, '..');
@@ -340,6 +349,165 @@ export const SCRIPTS: PrompterScript[] = `;
 
 const out = `${banner}${JSON.stringify(scripts, null, 2)};\n`;
 writeFileSync(join(repo, 'src/shared/scripts.ts'), out);
+
+/* ================================================================== *
+ * THE DOMAIN MODEL — src/shared/script-set.ts
+ * ================================================================== */
+
+/** Group a flat list of minor headings under the authored major topics. */
+function buildTopics(n, majors, minorHeadings, paragraphs, label) {
+  const total = majors.reduce((sum, [, count]) => sum + count, 0);
+  if (total !== minorHeadings.length)
+    throw new Error(
+      `${label}: majors cover ${total} minor topics but ${minorHeadings.length} headings exist`,
+    );
+  if (minorHeadings.length !== paragraphs.length)
+    throw new Error(
+      `${label}: ${minorHeadings.length} headings for ${paragraphs.length} paragraphs — must match`,
+    );
+
+  const topics = [];
+  let cursor = 0;
+  majors.forEach(([heading, count], m) => {
+    const minors = [];
+    for (let k = 0; k < count; k++) {
+      const index = cursor + k;
+      minors.push({
+        id: `t${m + 1}.${k + 1}`,
+        heading: minorHeadings[index],
+        // One paragraph per minor topic in the Kybernesis corpus. The schema
+        // allows several; nothing here needs it yet.
+        paragraphs: [{ id: `p${index + 1}`, text: paragraphs[index] }],
+      });
+    }
+    topics.push({ id: `t${m + 1}`, heading, minors });
+    cursor += count;
+  });
+  return topics;
+}
+
+/**
+ * The authored bullets are ONE trigger style, and it is style B — phrases
+ * compressed out of the paragraph, not lifted verbatim (A) and not loose
+ * keywords (C). Labelling it honestly matters: A and C are deliberately absent
+ * because nothing has authored them yet, and the app never invents a trigger.
+ * They arrive through `write_trigger_set`.
+ */
+function buildTriggerSet(authored, paragraphIds) {
+  return {
+    style: 'compressed-concept',
+    authoredBy: 'hand',
+    note: 'Carried over from the original Kybernesis prompter; the one surviving specimen. Not a settled rule — see docs/open-questions.md Q1.',
+    triggers: authored.bullets.map((text, index) => ({
+      id: `g${index + 1}`,
+      text,
+      paragraphId: paragraphIds[authored.map[index] - 1],
+    })),
+  };
+}
+
+const domainScripts = source.map((v) => {
+  const authored = AUTHORED[v.n];
+  const majors = MAJORS[v.n];
+  if (!majors) throw new Error(`no authored major topics for script ${v.n}`);
+
+  const label = `script ${String(v.n).padStart(2, '0')}`;
+  const topics = buildTopics(v.n, majors, authored.headings, v.voice, label);
+  const paragraphIds = topics.flatMap((major) =>
+    major.minors.flatMap((minor) => minor.paragraphs.map((p) => p.id)),
+  );
+
+  const takeaway = (v.tom.find((pair) => pair[0] === 'Desired takeaway') || [])[1] || '';
+  // `one` is Tom's one-liner — brief by construction, which is what
+  // requirements §6 asks for ("a set of twelve scannable in one sitting").
+  // `desc` is the long production note and is deliberately NOT used here.
+  const summary = (v.one || (Array.isArray(v.desc) ? v.desc[0] : v.desc) || v.t || '')
+    .toString()
+    .trim();
+
+  const transcripts = [
+    {
+      id: 'tom-original',
+      kind: 'provenance',
+      corpus: 'tom-original',
+      talentId: null,
+      source: 'src/shared/data/kybernesis-phase-1.source.json — Tom Lane’s Phase 1 handover',
+      topics,
+      triggerSets: [buildTriggerSet(authored, paragraphIds)],
+    },
+  ];
+
+  const cadence = CADENCE[v.n];
+  if (cadence) {
+    const cadenceTopics = buildTopics(
+      v.n,
+      cadence.majors,
+      cadence.minors,
+      cadence.paragraphs,
+      `${label} (${cadence.corpus})`,
+    );
+    transcripts.push({
+      id: cadence.corpus,
+      kind: 'cadence',
+      corpus: cadence.corpus,
+      // A cadence transcript without a talent is meaningless — cadence is
+      // measured per person, never in general.
+      talentId: 'david',
+      source: cadence.source,
+      topics: cadenceTopics,
+      // No trigger set. Triggers derived from Tom's 7-word breath groups are a
+      // DIFFERENT experiment from triggers derived from the 11-word rewrite
+      // (requirements open item 9). Authoring them is an agent's job, and
+      // inventing them here would silently settle the question.
+      triggerSets: [],
+    });
+  }
+
+  return {
+    id: `${SET.id}/${String(v.n).padStart(2, '0')}`,
+    n: v.n,
+    title: v.t,
+    takeaway: takeaway.replace(/[“”]/g, '').trim(),
+    summary,
+    transcripts,
+  };
+});
+
+const scriptSet = { ...SET, scripts: domainScripts };
+
+const domainBanner = `/**
+ * THE KYBERNESIS PHASE 1 SET — generated, do not edit by hand.
+ *
+ * Regenerate with \`npm run build:data\`. This is the SEED for the repository,
+ * not the live copy: the control API writes to disk, and seeding never
+ * overwrites what is already there (src/core/repository.ts).
+ *
+ * Shapes come from src/shared/domain.ts. Paragraphs are verbatim — Tom's
+ * originals from src/shared/data/kybernesis-phase-1.source.json, the
+ * re-cadenced versions from ~/dev/ad/brains/kybernesis/phase-1-scripts/.
+ * Headings, major-topic groupings and the one trigger set are authored by hand
+ * in scripts/authored-domain.mjs and scripts/build-scripts-data.mjs.
+ */
+
+import type { ScriptSet, Talent } from './domain.js';
+
+export const KYBERNESIS_PHASE_1: ScriptSet = `;
+
+writeFileSync(
+  join(repo, 'src/shared/script-set.ts'),
+  `${domainBanner}${JSON.stringify(scriptSet, null, 2)};\n\nexport const TALENTS: Talent[] = ${JSON.stringify(
+    TALENTS,
+    null,
+    2,
+  )};\n`,
+);
+
+const cadenceCount = domainScripts.filter((s) =>
+  s.transcripts.some((t) => t.kind === 'cadence'),
+).length;
+console.log(
+  `✓ wrote src/shared/script-set.ts — ${domainScripts.length} scripts, ${cadenceCount} with a cadence transcript, ${TALENTS.length} talent(s)`,
+);
 
 console.log(`✓ wrote src/shared/scripts.ts — ${scripts.length} scripts`);
 for (const s of scripts) {

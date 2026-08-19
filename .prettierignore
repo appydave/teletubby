@@ -1,0 +1,9 @@
+# Prose is hand-wrapped and some of it carries rulings (docs/north-star.md).
+# Prettier reflows markdown tables and rewrites emphasis markers, which produces
+# a large diff that hides the real change — and docs/spec.md lists editing a
+# ruling-bearing doc as ask-first. Formatting is for code.
+*.md
+docs/
+out/
+src/shared/scripts.ts
+src/shared/script-set.ts
