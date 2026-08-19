@@ -1,15 +1,32 @@
-import { useEffect } from 'react';
-import { SCRIPTS } from '@shared/scripts';
+import { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
+import type { ScriptSet, TriggerStyle } from '@shared/domain';
+import { TRIGGER_STYLE_LETTER } from '@shared/domain';
 import {
-  useProm,
-  currentScript,
-  currentSectionIndex,
-  currentLane,
-  LANES,
+  CAMERA_SIDES,
+  RECORDING_SET,
   TEXT_PRESETS,
+  ZONE_LABEL,
+  activeTriggers,
+  currentMajor,
+  currentMinor,
+  currentParagraph,
+  currentParagraphId,
+  currentScript,
+  currentTranscript,
+  rankOf,
+  useProm,
+  zoneOrder,
+  type RecordingZone,
   type TextPreset,
 } from './store';
-import { TopicRail, BulletLane, ScriptLane, type Rank } from './components/Lanes';
+import {
+  MajorZone,
+  MinorZone,
+  ParagraphZone,
+  TranscriptDrawer,
+  TriggerZone,
+} from './components/Zones';
 import CueOverlay from './components/CueOverlay';
 
 const PRESET_LABEL: Record<TextPreset, string> = {
@@ -19,36 +36,121 @@ const PRESET_LABEL: Record<TextPreset, string> = {
 };
 
 export default function App(): JSX.Element {
+  const set = useProm((s) => s.set);
+  const load = useProm((s) => s.load);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  /**
+   * The renderer is a CLIENT of the capability core, exactly like an agent —
+   * it just arrives with the `ui` principal over the IPC bridge instead of over
+   * HTTP. It does not import the script data.
+   *
+   * That is the whole point of session 1: if the UI read a bundled constant,
+   * an agent's edit would be invisible here, and "the app is drivable" would be
+   * a claim with nothing behind it.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await window.appytron.invoke<{ sets: { id: string }[] }>({
+        capability: 'list_sets',
+      });
+      if (!result.ok) {
+        if (!cancelled) setFailure(result.error.message);
+        return;
+      }
+      const first = result.data.sets[0];
+      if (!first) {
+        if (!cancelled) setFailure('No script sets in the store.');
+        return;
+      }
+      const full = await window.appytron.invoke<ScriptSet>({
+        capability: 'get_set',
+        input: { setId: first.id, full: true },
+      });
+      if (cancelled) return;
+      if (!full.ok) {
+        setFailure(full.error.message);
+        return;
+      }
+      load(full.data);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
+
+  if (failure) return <Waiting message={failure} failed />;
+  if (!set) return <Waiting message="Loading the set…" />;
+  return <Stage />;
+}
+
+function Waiting({ message, failed }: { message: string; failed?: boolean }): JSX.Element {
+  return (
+    <div className="flex h-screen flex-col bg-canvas text-ink">
+      <div className="tt-drag h-10 shrink-0 border-b border-edge bg-panel" />
+      <div className="flex flex-1 items-center justify-center px-10 text-center">
+        <p className={['font-body text-script', failed ? 'text-ink' : 'text-muted'].join(' ')}>
+          {message}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Stage(): JSX.Element {
   const script = useProm(currentScript);
-  const sectionIndex = useProm(currentSectionIndex);
-  const lane = useProm(currentLane);
+  const transcript = useProm(currentTranscript);
+  const paragraph = useProm(currentParagraph);
+  const minor = useProm(currentMinor);
+  const major = useProm(currentMajor);
+  const triggers = useProm(activeTriggers);
+  const paragraphId = useProm(currentParagraphId);
+  // zoneOrder builds a new array every call; compare by value or the
+  // component re-renders forever. See the note on activeTriggers.
+  const order = useProm(useShallow(zoneOrder));
+
+  const set = useProm((s) => s.set);
   const step = useProm((s) => s.step);
-  const scriptIndex = useProm((s) => s.scriptIndex);
+  const style = useProm((s) => s.style);
+  const visible = useProm((s) => s.visible);
+  const driven = useProm((s) => s.driven);
+  const camera = useProm((s) => s.camera);
+  const transcriptOpen = useProm((s) => s.transcriptOpen);
+  const transcriptEdge = useProm((s) => s.transcriptEdge);
   const mirror = useProm((s) => s.mirror);
   const focus = useProm((s) => s.focus);
   const text = useProm((s) => s.text);
 
-  const stepNext = useProm((s) => s.stepNext);
-  const stepPrev = useProm((s) => s.stepPrev);
-  const laneLeft = useProm((s) => s.laneLeft);
-  const laneRight = useProm((s) => s.laneRight);
   const selectScript = useProm((s) => s.selectScript);
+  const selectTranscript = useProm((s) => s.selectTranscript);
+  const selectStyle = useProm((s) => s.selectStyle);
+  const toggleZone = useProm((s) => s.toggleZone);
+  const setDriven = useProm((s) => s.setDriven);
+  const setCamera = useProm((s) => s.setCamera);
+  const toggleTranscript = useProm((s) => s.toggleTranscript);
   const toggleMirror = useProm((s) => s.toggleMirror);
   const toggleFocus = useProm((s) => s.toggleFocus);
   const setText = useProm((s) => s.setText);
+  const stepNext = useProm((s) => s.stepNext);
+  const stepPrev = useProm((s) => s.stepPrev);
 
-  // The text preset is a root-level data attribute so a single CSS variable
-  // rescales every lane at once.
+  // The text preset is a root-level data attribute so one CSS variable rescales
+  // every zone at once.
   useEffect(() => {
     document.documentElement.dataset.text = text;
   }, [text]);
 
   /**
    * One key means one scale of movement:
-   *   ↑ ↓ Space  step the TRIGGERS (always — even in the side-by-side view,
-   *              because the triggers are what you speak from)
-   *   ← →        which COLUMN is on screen
-   *   click      which SCRIPT — deliberately not on the keyboard at all
+   *   ↑ ↓ Space  step the beat — clamped inside the script, always
+   *   T          the full-transcript skim surface
+   *   click      which script, which corpus, which style
+   *
+   * ← → are deliberately NOT bound any more. They used to walk a fixed lane
+   * track; with the zone model there is no single axis for them to mean, and a
+   * key that means something different depending on the arrangement is exactly
+   * the confusion the prior-art rule exists to prevent.
    */
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
@@ -63,13 +165,9 @@ export default function App(): JSX.Element {
           e.preventDefault();
           stepPrev();
           break;
-        case 'ArrowLeft':
-          e.preventDefault();
-          laneLeft();
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          laneRight();
+        case 't':
+        case 'T':
+          toggleTranscript();
           break;
         case 'd':
         case 'D':
@@ -89,16 +187,27 @@ export default function App(): JSX.Element {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stepNext, stepPrev, laneLeft, laneRight, toggleFocus, toggleMirror]);
+  }, [stepNext, stepPrev, toggleTranscript, toggleFocus, toggleMirror]);
 
-  const showBullets = lane === 'bullets' || lane === 'both';
-  const showScript = lane === 'script' || lane === 'both';
+  if (!script || !transcript || !set) return <Waiting message="No script selected." />;
 
-  // In the side-by-side view the triggers are what you are driving, so they
-  // carry the strong marker and the transcript the quiet one. When a lane is
-  // alone on screen it is unambiguously the one you are reading.
-  const bulletRank: Rank = 'driven';
-  const scriptRank: Rank = lane === 'both' ? 'follower' : 'driven';
+  const zoneNode = (zone: RecordingZone): JSX.Element => {
+    const rank = rankOf(driven, zone);
+    switch (zone) {
+      case 'major':
+        return (
+          <MajorZone key={zone} transcript={transcript} current={major} rank={rank} focus={focus} />
+        );
+      case 'minor':
+        return (
+          <MinorZone key={zone} transcript={transcript} current={minor} rank={rank} focus={focus} />
+        );
+      case 'triggers':
+        return <TriggerZone key={zone} triggers={triggers} step={step} rank={rank} focus={focus} />;
+      case 'paragraph':
+        return <ParagraphZone key={zone} paragraph={paragraph} rank={rank} />;
+    }
+  };
 
   return (
     <div className="flex h-screen flex-col bg-canvas text-ink">
@@ -111,66 +220,113 @@ export default function App(): JSX.Element {
             Teletubby
           </span>
           <span className="font-body text-xs text-muted">
-            Kybernesis Phase 1 · glance, don&apos;t read
+            {set.title} · glance, don&apos;t read
           </span>
         </div>
 
         {/* Script selection — click only. */}
         <div className="flex flex-wrap gap-1.5 px-5 py-3">
-          {SCRIPTS.map((s, i) => {
-            const active = i === scriptIndex;
-            return (
-              <button
-                key={s.n}
-                type="button"
-                onClick={() => selectScript(i)}
-                title={s.title}
-                className={[
-                  'rounded border px-2.5 py-1 font-mono text-xs transition',
-                  active
-                    ? 'border-edge-strong bg-driven text-ink'
-                    : 'border-edge bg-card text-muted hover:border-follower hover:text-ink',
-                ].join(' ')}
-              >
-                {String(s.n).padStart(2, '0')}
-              </button>
-            );
-          })}
+          {set.scripts.map((s) => (
+            <Chip
+              key={s.id}
+              on={s.id === script.id}
+              onClick={() => selectScript(s.id)}
+              title={s.title}
+              mono
+            >
+              {String(s.n).padStart(2, '0')}
+            </Chip>
+          ))}
           <span className="ml-3 self-center font-display text-sm uppercase tracking-wide text-ink">
             {String(script.n).padStart(2, '0')} · {script.title}
           </span>
         </div>
 
-        {/* Controls + keymap */}
+        {/* Corpus + trigger style — the two axes of the experiment. */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge px-5 py-2">
-          <LaneTrack lane={lane} />
-
-          <div className="flex items-center gap-1.5">
-            <span className="font-display text-[0.65rem] uppercase tracking-[0.18em] text-muted">
-              Text
-            </span>
-            {TEXT_PRESETS.map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => setText(preset)}
-                className={[
-                  'rounded border px-2 py-0.5 font-display text-[0.7rem] uppercase tracking-wide transition',
-                  text === preset
-                    ? 'border-edge-strong bg-driven text-ink'
-                    : 'border-edge bg-card text-muted hover:text-ink',
-                ].join(' ')}
-              >
-                {PRESET_LABEL[preset]}
-              </button>
+          <Group label="Corpus">
+            {script.transcripts.map((t) => (
+              <Chip key={t.id} on={t.id === transcript.id} onClick={() => selectTranscript(t.id)}>
+                {t.kind === 'provenance' ? 'Provenance' : 'Cadence'}
+                <span className="ml-1.5 font-mono text-[0.6rem] opacity-70">{t.corpus}</span>
+              </Chip>
             ))}
-          </div>
+          </Group>
 
-          <Toggle label="Mirror" hint="M" on={mirror} onClick={toggleMirror} />
-          <Toggle label="Focus" hint="D" on={focus} onClick={toggleFocus} />
+          <Group label="Style">
+            {(['near-verbatim', 'compressed-concept', 'loose-keywords'] as TriggerStyle[]).map(
+              (candidate) => {
+                const has = transcript.triggerSets.some((t) => t.style === candidate);
+                return (
+                  <Chip
+                    key={candidate}
+                    on={style === candidate}
+                    disabled={!has}
+                    onClick={() => selectStyle(candidate)}
+                    title={has ? candidate : `${candidate} — not authored yet`}
+                  >
+                    {TRIGGER_STYLE_LETTER[candidate]}
+                  </Chip>
+                );
+              },
+            )}
+          </Group>
+        </div>
+
+        {/* Zones, driven zone, and the camera edge everything bends to. */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge px-5 py-2">
+          <Group label="Zones">
+            {RECORDING_SET.map((zone) => (
+              <Chip key={zone} on={visible.includes(zone)} onClick={() => toggleZone(zone)}>
+                {ZONE_LABEL[zone]}
+              </Chip>
+            ))}
+          </Group>
+
+          <Group label="Driving">
+            {RECORDING_SET.map((zone) => (
+              <Chip
+                key={zone}
+                on={driven === zone}
+                disabled={!visible.includes(zone)}
+                onClick={() => setDriven(zone)}
+              >
+                {ZONE_LABEL[zone]}
+              </Chip>
+            ))}
+          </Group>
+
+          <Group label="Camera">
+            {CAMERA_SIDES.map((side) => (
+              <Chip key={side} on={camera === side} onClick={() => setCamera(side)}>
+                {side === 'left' ? '◀ Left' : 'Right ▶'}
+              </Chip>
+            ))}
+          </Group>
+        </div>
+
+        {/* Presentation. */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge px-5 py-2">
+          <Group label="Text">
+            {TEXT_PRESETS.map((preset) => (
+              <Chip key={preset} on={text === preset} onClick={() => setText(preset)}>
+                {PRESET_LABEL[preset]}
+              </Chip>
+            ))}
+          </Group>
+
+          <Chip on={transcriptOpen} onClick={toggleTranscript}>
+            Transcript <span className="font-mono text-[0.65rem] opacity-60">T</span>
+          </Chip>
+          <Chip on={mirror} onClick={toggleMirror}>
+            Mirror <span className="font-mono text-[0.65rem] opacity-60">M</span>
+          </Chip>
+          <Chip on={focus} onClick={toggleFocus}>
+            Focus <span className="font-mono text-[0.65rem] opacity-60">D</span>
+          </Chip>
 
           <span className="ml-auto font-mono text-[0.7rem] text-muted">
-            ↑ ↓ space step · ← → column · click script · F fullscreen
+            ↑ ↓ space step · T transcript · F fullscreen
           </span>
         </div>
       </header>
@@ -178,75 +334,71 @@ export default function App(): JSX.Element {
       {/* ---------------- stage: mirrorable ---------------- */}
       <main className="relative flex-1 overflow-hidden">
         <div className={['flex h-full', mirror ? 'tt-mirror' : ''].join(' ')}>
-          <TopicRail script={script} sectionIndex={sectionIndex} />
-          {showBullets && (
-            <BulletLane script={script} step={step} rank={bulletRank} focus={focus} />
-          )}
-          {showScript && (
-            <ScriptLane
-              script={script}
-              sectionIndex={sectionIndex}
-              rank={scriptRank}
-              focus={focus}
-            />
-          )}
+          {order.map(zoneNode)}
         </div>
+        <TranscriptDrawer
+          transcript={transcript}
+          currentParagraphId={paragraphId}
+          edge={transcriptEdge}
+          open={transcriptOpen}
+          onClose={toggleTranscript}
+        />
         <CueOverlay />
       </main>
 
       <footer className="shrink-0 border-t border-edge bg-panel px-5 py-1.5">
         <span className="font-mono text-[0.7rem] text-muted">
-          beat {step + 1}/{script.bullets.length} · section {sectionIndex + 1}/
-          {script.sections.length} · {script.takeaway}
+          beat {triggers.length === 0 ? 0 : step + 1}/{triggers.length} · {transcript.corpus} ·
+          driving {ZONE_LABEL[driven]} · lens {camera} · {script.takeaway}
         </span>
       </footer>
     </div>
   );
 }
 
-function LaneTrack({ lane }: { lane: string }): JSX.Element {
+function Group({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-1.5">
       <span className="font-display text-[0.65rem] uppercase tracking-[0.18em] text-muted">
-        Column
+        {label}
       </span>
-      {LANES.map((name) => (
-        <span
-          key={name}
-          className={[
-            'rounded border px-2 py-0.5 font-display text-[0.7rem] uppercase tracking-wide',
-            lane === name ? 'border-edge-strong bg-driven text-ink' : 'border-edge bg-card text-muted',
-          ].join(' ')}
-        >
-          {name}
-        </span>
-      ))}
+      {children}
     </div>
   );
 }
 
-function Toggle({
-  label,
-  hint,
+function Chip({
   on,
+  disabled,
   onClick,
+  title,
+  mono,
+  children,
 }: {
-  label: string;
-  hint: string;
   on: boolean;
+  disabled?: boolean;
   onClick: () => void;
+  title?: string;
+  mono?: boolean;
+  children: React.ReactNode;
 }): JSX.Element {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
+      title={title}
       aria-pressed={on}
       className={[
-        'rounded border px-2.5 py-0.5 font-display text-[0.7rem] uppercase tracking-wide transition',
-        on ? 'border-edge-strong bg-driven text-ink' : 'border-edge bg-card text-muted hover:text-ink',
+        'rounded border px-2.5 py-0.5 uppercase tracking-wide transition',
+        mono ? 'font-mono text-xs normal-case' : 'font-display text-[0.7rem]',
+        on
+          ? 'border-edge-strong bg-driven text-ink'
+          : 'border-edge bg-card text-muted hover:text-ink',
+        disabled ? 'cursor-not-allowed opacity-35 hover:text-muted' : '',
       ].join(' ')}
     >
-      {label} <span className="font-mono text-[0.65rem] opacity-60">{hint}</span>
+      {children}
     </button>
   );
 }

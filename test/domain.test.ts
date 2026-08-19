@@ -5,14 +5,13 @@ import {
   cadenceFor,
   paragraphsOf,
   provenanceOf,
-  scriptSetSchema,
-  talentSchema,
   validateScriptSet,
   validateTranscript,
   validateTriggerSet,
   type Transcript,
   type TriggerSet,
 } from '@shared/domain';
+import { scriptSetSchema, talentSchema } from '@shared/domain-schema';
 
 /**
  * The domain rules, and the shipped data held to them.
@@ -103,6 +102,30 @@ describe('the shipped Kybernesis set', () => {
     for (const script of KYBERNESIS_PHASE_1.scripts) {
       expect(script.summary.length).toBeGreaterThan(20);
       expect(script.summary.length, `${script.id} summary is a wall`).toBeLessThan(200);
+    }
+  });
+
+  it('holds every landing line to the originator’s approved takeaway', () => {
+    // Ported from the legacy scripts-data spec when the flat shape was retired.
+    // Meaning belongs to provenance: the talent may re-voice the words, but the
+    // last beat has to still land on what Tom approved.
+    const norm = (value: string): string =>
+      value
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+
+    for (const script of KYBERNESIS_PHASE_1.scripts) {
+      const triggers = provenanceOf(script)!.triggerSets[0].triggers;
+      const landing = norm(triggers[triggers.length - 1].text);
+      const takeaway = norm(script.takeaway);
+      expect(takeaway.length).toBeGreaterThan(0);
+
+      const overlap = takeaway.split(' ').filter((w) => w.length > 3 && landing.includes(w));
+      expect(
+        overlap.length,
+        `${script.id} landing line drifted from its takeaway`,
+      ).toBeGreaterThanOrEqual(3);
     }
   });
 

@@ -23,8 +23,6 @@ import {
   findTranscript,
   findTriggerSet,
   paragraphsOf,
-  scriptSetSchema,
-  talentSchema,
   transcriptText,
   validateScriptSet,
   validateTranscript,
@@ -36,6 +34,7 @@ import {
   type Transcript,
   type TriggerSet,
 } from '@shared/domain';
+import { scriptSetSchema, talentSchema } from '@shared/domain-schema';
 import { CAPABILITIES, type CapabilityMeta, type Principal } from '@shared/capabilities';
 import type { ActiveContextHolder } from './active-context.js';
 import { scoreAgainst } from './cadence.js';
@@ -302,9 +301,16 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.get_set = async (input, context) => {
-    const { setId } = parse(z.object({ setId: slug.optional() }), input);
+    const { setId, full } = parse(
+      z.object({ setId: slug.optional(), full: z.boolean().optional() }),
+      input,
+    );
     const document = await context.repository.read();
-    return setSummary(resolveSet(document, setId, context.active));
+    const set = resolveSet(document, setId, context.active);
+    // Summary by default — that is what makes twelve scripts scannable in one
+    // sitting (§6). A caller that has to RENDER the set asks for `full`; making
+    // it the default would push the whole corpus through every list view.
+    return full ? set : setSummary(set);
   };
 
   handlers.get_script = async (input, context) => {

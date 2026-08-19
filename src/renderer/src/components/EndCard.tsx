@@ -1,5 +1,4 @@
-import { SCRIPTS } from '@shared/scripts';
-import { useProm, isLastStep } from '../store';
+import { useProm, isLastStep, nextScript } from '../store';
 
 /**
  * Sits at the bottom of every script. It goes live (yellow) once you reach the
@@ -10,10 +9,9 @@ import { useProm, isLastStep } from '../store';
 export default function EndCard(): JSX.Element {
   const reached = useProm(isLastStep);
   const nudge = useProm((s) => s.nudge);
-  const scriptIndex = useProm((s) => s.scriptIndex);
+  const next = useProm(nextScript);
   const goToNextScript = useProm((s) => s.goToNextScript);
 
-  const next = SCRIPTS[scriptIndex + 1];
   const isFinal = !next;
 
   return (
@@ -24,9 +22,7 @@ export default function EndCard(): JSX.Element {
       className={[
         nudge > 0 && reached ? 'tt-nudge' : '',
         'mt-8 rounded-lg border-2 px-5 py-4 transition-colors duration-200',
-        reached
-          ? 'border-driven bg-driven-wash'
-          : 'border-edge bg-transparent opacity-45',
+        reached ? 'border-driven bg-driven-wash' : 'border-edge bg-transparent opacity-45',
       ].join(' ')}
     >
       <p className="font-display text-xs uppercase tracking-[0.18em] text-muted">
@@ -34,9 +30,7 @@ export default function EndCard(): JSX.Element {
       </p>
 
       {isFinal ? (
-        <p className="mt-1 font-body text-script text-ink">
-          That was the last of the twelve.
-        </p>
+        <p className="mt-1 font-body text-script text-ink">That was the last of the twelve.</p>
       ) : (
         <>
           <p className="mt-1 font-body text-script text-ink">

@@ -29,17 +29,20 @@ Background: [docs/concept.md](docs/concept.md) · origin brainstorm
 
 ## Current state
 
-Two things, and they do not yet talk to each other:
+**Sessions 1 and 2 have landed, and the renderer is now a client of the capability core.**
 
-1. **The reading surface** — three fixed columns with keyboard navigation over the twelve
-   Kybernesis scripts. Reads the legacy flat `src/shared/scripts.ts`.
-2. **The capability core + control API** (session 1) — the domain model, and a loopback HTTP
+1. **The capability core + control API** (session 1) — the domain model, and a loopback HTTP
    surface on **7111** that lets an agent read and write scripts, transcripts and trigger sets.
-   Reads and writes the new `src/shared/script-set.ts` model.
+2. **The zone model** (session 2) — four selectable zones, the driven zone placeable nearest
+   the lens, and both corpora switchable. The renderer loads everything through
+   `window.appytron.invoke` with the `ui` principal; it imports no script data.
 
-**The renderer has not been migrated onto the domain model yet.** That is session 2 (the zone
-model), and until it happens the two data shapes are generated from ONE authoring source and
-kept in step by the build. Do not add a third.
+**The legacy flat `src/shared/scripts.ts` is gone**, along with its test. One generated shape,
+one authoring source.
+
+⚠️ **Trigger styles A and C are still unauthored for every script**, and the re-cadenced
+transcripts have no trigger set at all. That is session 3, and it is why the app opens on Tom's
+originals even for scripts 1–3 — a transcript with no triggers cannot be driven.
 
 **Explicitly NOT built, and not to be added without asking:**
 the AI layer (live listening, waffle detection, sync-to-voice, trigger *generation*),
@@ -96,7 +99,7 @@ The app must be running — the surface lives in its process. Port and token com
 ```bash
 npm install        # npm ONLY — packageManager is pinned; pnpm blocks Electron's postinstall
 npm run dev        # Electron app; renderer on 7110, control API on 7111 (registered slots)
-npm test           # 146 tests
+npm test           # 151 tests
 npm run typecheck
 ```
 
@@ -143,10 +146,13 @@ a translucent surface, declare a real token for it (`--tt-veil`, `--tt-lane-alt`
 **Two generated files, one authoring source.** Both come from `npm run build:data`; neither
 may be hand-edited.
 
-- `src/shared/script-set.ts` — **the domain model, and the one that matters.** The Kybernesis
-  set as `ScriptSet` + `TALENTS`. Shapes and rules live in `src/shared/domain.ts`.
-- `src/shared/scripts.ts` — the flat shape the current renderer still reads. A *projection*
-  of the same authoring tables, scheduled for removal in session 2.
+- `src/shared/script-set.ts` — **the domain model.** The Kybernesis set as `ScriptSet` +
+  `TALENTS`. Shapes and rules live in `src/shared/domain.ts`.
+
+⚠️ **`domain.ts` must stay dependency-free.** The renderer imports it, and `@appydave/core`
+reaches `node:fs` through its config loader — which has no browser equivalent and breaks the
+renderer bundle outright. The Zod schemas live in `src/shared/domain-schema.ts`, imported only
+by the core in main. That is also where they belong: validation happens where writes happen.
 
 Authoring lives in two places, both by hand:
 `scripts/build-scripts-data.mjs` (per-paragraph headings, the one trigger set) and
@@ -192,6 +198,13 @@ experiment, **not** as a settled rule — see `docs/open-questions.md` Q1, which
 blocking unknown for this whole product.
 
 ## Gotchas
+
+- **A Zustand selector that builds an array blanks the window.** `useProm(zoneOrder)` re-renders
+  forever because the array is a new reference each call — and the build, the typecheck and all
+  151 tests stay green while the window paints nothing. Any selector containing `[...]`, `.map`,
+  `.filter` or `?? []` needs `useShallow`. See `docs/kdd/learnings/`.
+- **Look at the window before claiming a UI change works.** Nothing in the automated checks
+  catches a renderer that failed to mount.
 
 - **The window has no native title bar.** `titleBarStyle: 'hiddenInset'` means the page must
   supply the drag region — `.tt-drag` on the title strip in `App.tsx`. Without it the window

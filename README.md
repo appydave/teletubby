@@ -31,24 +31,33 @@ verbatim. The fix isn't a better script — it's needing less of it on screen.
 
 ## Status
 
-🔬 **Working proof of concept.** An AppyTron (Electron) desktop app with the three-column
-reading surface and keyboard navigation over the twelve real Kybernesis Phase 1 scripts.
+🔬 **Working, and drivable.** An AppyTron (Electron) desktop app with a selectable zone model
+over the twelve real Kybernesis Phase 1 scripts — plus a loopback control API on `7111` so an
+agent can read and write scripts, transcripts and trigger words without the UI.
 
 ```bash
-npm install && npm run dev
+npm install && npm run dev     # npm only — packageManager is pinned
+
+teletubby health               # is it up?
+teletubby capabilities         # every verb, with its contract
 ```
 
 | Key | Does |
 |---|---|
-| `↑` `↓` `Space` | step the triggers — clamped inside the script, never crosses into the next |
-| `←` `→` | which column: bullets · both · script |
-| click a chip | which script (deliberately not on the keyboard) |
+| `↑` `↓` `Space` | step the beat — clamped inside the script, never crosses into the next |
+| `T` | the full transcript — slides out from the edge away from the lens |
 | `M` | mirror, for prompter glass |
 | `D` | focus — dim everything but the current beat |
 | `F` | fullscreen |
+| click | which script, which corpus, which trigger style, which zones, which side the lens is on |
 
-**Not built:** the AI layer, FliHub recording, clip capture, script authoring. Column 1 is
-a display column; nothing generates those headings automatically.
+`←` `→` are deliberately unbound. They used to walk a fixed lane track; with the zone model
+there is no single axis for them to mean, and a key that means something different depending on
+the arrangement is the confusion the whole design exists to prevent.
+
+**Not built:** the AI layer, FliHub recording, clip capture, human script authoring. Column 1 is
+a display column; nothing generates those headings automatically. Trigger styles A and C are
+not authored yet — an agent writes them through the control API, the app never invents one.
 
 ## Docs
 

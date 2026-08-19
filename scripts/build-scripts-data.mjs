@@ -1,6 +1,6 @@
 /**
- * Generates `src/shared/scripts.ts` — the twelve Kybernesis Phase 1 scripts as
- * prompter data.
+ * Generates `src/shared/script-set.ts` — the twelve Kybernesis Phase 1 scripts
+ * as the domain model in `src/shared/domain.ts`.
  *
  * WHY THIS EXISTS
  * The paragraphs (column 3) are lifted VERBATIM from Tom Lane's Phase 1 handover
@@ -13,12 +13,9 @@
  * positionally. Deriving it proportionally was considered and rejected — the
  * boundaries do not fall evenly, and a wrong sync is worse than no sync.
  *
- * TWO ARTIFACTS, ONE AUTHORING SOURCE
- * This emits both `src/shared/script-set.ts` (the domain model — the source of
- * truth from session 1 onward) and `src/shared/scripts.ts` (the flat shape the
- * proof-of-concept renderer still reads). The second is a PROJECTION of the
- * same authored tables, not a second source; it is scheduled for removal when
- * the renderer moves onto the zone model in session 2.
+ * ONE ARTIFACT. The flat `src/shared/scripts.ts` projection was retired in
+ * session 2 when the renderer moved onto the zone model — a second generated
+ * shape is a second thing to keep in step, and nothing reads it any more.
  *
  * Run: `npm run build:data`
  */
@@ -294,62 +291,6 @@ function validate(n, paragraphs, authored) {
   }
 }
 
-const scripts = source.map((v) => {
-  const authored = AUTHORED[v.n];
-  if (!authored) throw new Error(`no authored bullets for script ${v.n}`);
-  validate(v.n, v.voice, authored);
-
-  const takeaway = (v.tom.find((pair) => pair[0] === 'Desired takeaway') || [])[1] || '';
-
-  return {
-    n: v.n,
-    title: v.t,
-    takeaway: takeaway.replace(/[“”]/g, '').trim(),
-    sections: v.voice.map((paragraph, i) => ({
-      heading: authored.headings[i],
-      paragraph,
-    })),
-    bullets: authored.bullets,
-    map: authored.map,
-  };
-});
-
-const banner = `/**
- * THE TWELVE KYBERNESIS PHASE 1 SCRIPTS — generated, do not edit by hand.
- *
- * Regenerate with \`npm run build:data\`. Paragraphs come verbatim from
- * src/shared/data/kybernesis-phase-1.source.json (Tom Lane's Phase 1 handover).
- * Headings, bullets and the bullet→paragraph map are authored in
- * scripts/build-scripts-data.mjs.
- */
-
-export interface Section {
-  /** Column 1 — the topic heading for this spoken beat. */
-  heading: string;
-  /** Column 3 — the transcript paragraph, verbatim. */
-  paragraph: string;
-}
-
-export interface PrompterScript {
-  n: number;
-  title: string;
-  /** Tom's approved "Desired takeaway" — the landing line is held to this. */
-  takeaway: string;
-  sections: Section[];
-  /** Column 2 — hook line, 4–6 trigger points, landing line. */
-  bullets: string[];
-  /**
-   * bullets[i] belongs to sections[map[i] - 1]. Authored, never derived —
-   * see docs/prior-art-kybernesis-prompter.md §5.
-   */
-  map: number[];
-}
-
-export const SCRIPTS: PrompterScript[] = `;
-
-const out = `${banner}${JSON.stringify(scripts, null, 2)};\n`;
-writeFileSync(join(repo, 'src/shared/scripts.ts'), out);
-
 /* ================================================================== *
  * THE DOMAIN MODEL — src/shared/script-set.ts
  * ================================================================== */
@@ -508,10 +449,3 @@ const cadenceCount = domainScripts.filter((s) =>
 console.log(
   `✓ wrote src/shared/script-set.ts — ${domainScripts.length} scripts, ${cadenceCount} with a cadence transcript, ${TALENTS.length} talent(s)`,
 );
-
-console.log(`✓ wrote src/shared/scripts.ts — ${scripts.length} scripts`);
-for (const s of scripts) {
-  console.log(
-    `  ${String(s.n).padStart(2, '0')}  ${s.sections.length} sections · ${s.bullets.length} bullets · ${s.title}`,
-  );
-}

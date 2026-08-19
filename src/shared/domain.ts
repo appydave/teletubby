@@ -1,6 +1,13 @@
 /**
  * THE DOMAIN — the shapes Teletubby actually deals in.
  *
+ * ⚠️ **No runtime dependencies, deliberately.** The renderer imports this file,
+ * and the renderer cannot carry a validation library: `@appydave/core` reaches
+ * `node:fs` through its config loader, which does not exist in a browser
+ * context and fails at bundle time rather than at runtime. The Zod schemas that
+ * used to live here are in `domain-schema.ts`, imported only by the core in the
+ * main process — which is also where writes are actually validated.
+ *
  * This file is a contract, not an artifact of a generator. `scripts.ts` carries
  * types too, but those were whatever one build script happened to emit; three
  * things were wrong with them and each one blocks a later session:
@@ -22,8 +29,6 @@
  * the build script and every adapter share these shapes.
  */
 
-import { z } from '@appydave/core';
-
 /* ------------------------------------------------------------------ *
  * Identity
  * ------------------------------------------------------------------ */
@@ -42,12 +47,6 @@ export type TopicId = string;
 export type ParagraphId = string;
 export type TriggerId = string;
 export type TalentId = string;
-
-const id = (label: string): z.ZodString =>
-  z
-    .string()
-    .min(1, `${label} must not be empty`)
-    .regex(/^[a-z0-9][a-z0-9\-/.]*$/i, `${label} must be a slug (a-z 0-9 - / .)`);
 
 /* ------------------------------------------------------------------ *
  * Transcripts — provenance vs cadence
@@ -217,84 +216,6 @@ export interface Talent {
   name: string;
   envelope: CadenceEnvelope;
 }
-
-/* ------------------------------------------------------------------ *
- * Zod schemas — the same shapes, enforced at every write
- * ------------------------------------------------------------------ */
-
-export const paragraphSchema: z.ZodType<Paragraph> = z.object({
-  id: id('paragraph id'),
-  text: z.string().trim().min(1, 'paragraph text must not be empty'),
-});
-
-export const minorTopicSchema: z.ZodType<MinorTopic> = z.object({
-  id: id('minor topic id'),
-  heading: z.string().trim().min(1, 'minor topic heading must not be empty'),
-  paragraphs: z.array(paragraphSchema).min(1, 'a minor topic needs at least one paragraph'),
-});
-
-export const majorTopicSchema: z.ZodType<MajorTopic> = z.object({
-  id: id('major topic id'),
-  heading: z.string().trim().min(1, 'major topic heading must not be empty'),
-  minors: z.array(minorTopicSchema).min(1, 'a major topic needs at least one minor topic'),
-});
-
-export const triggerSchema: z.ZodType<Trigger> = z.object({
-  id: id('trigger id'),
-  text: z.string().trim().min(1, 'trigger text must not be empty'),
-  paragraphId: id('paragraph id'),
-});
-
-export const triggerSetSchema: z.ZodType<TriggerSet> = z.object({
-  style: z.enum(TRIGGER_STYLES),
-  authoredBy: z.enum(AUTHORSHIPS),
-  note: z.string().optional(),
-  triggers: z.array(triggerSchema).min(2, 'a trigger set needs at least two steps'),
-});
-
-export const transcriptSchema: z.ZodType<Transcript> = z.object({
-  id: id('transcript id'),
-  kind: z.enum(TRANSCRIPT_KINDS),
-  corpus: id('corpus'),
-  talentId: id('talent id').nullable(),
-  source: z.string().trim().min(1, 'transcript source must not be empty'),
-  topics: z.array(majorTopicSchema).min(1, 'a transcript needs at least one major topic'),
-  triggerSets: z.array(triggerSetSchema),
-});
-
-export const scriptSchema: z.ZodType<Script> = z.object({
-  id: id('script id'),
-  n: z.number().int().positive(),
-  title: z.string().trim().min(1, 'script title must not be empty'),
-  takeaway: z.string().trim().min(1, 'script takeaway must not be empty'),
-  summary: z.string().trim().min(1, 'script summary must not be empty'),
-  transcripts: z.array(transcriptSchema),
-});
-
-export const scriptSetSchema: z.ZodType<ScriptSet> = z.object({
-  id: id('set id'),
-  title: z.string().trim().min(1, 'set title must not be empty'),
-  description: z.string().trim(),
-  scripts: z.array(scriptSchema),
-});
-
-export const cadenceEnvelopeSchema: z.ZodType<CadenceEnvelope> = z.object({
-  wordsMin: z.number().int().nonnegative(),
-  wordsMax: z.number().int().positive(),
-  breathGroupMeanMin: z.number().nonnegative(),
-  breaksPer100Max: z.number().nonnegative(),
-  sentenceSdMin: z.number().nonnegative(),
-  emDashMax: z.number().int().nonnegative(),
-  antiVoice: z.array(z.string().min(1)),
-  bookends: z.array(z.string().min(1)),
-  source: z.string().trim().min(1, 'an envelope must record where it was measured'),
-});
-
-export const talentSchema: z.ZodType<Talent> = z.object({
-  id: id('talent id'),
-  name: z.string().trim().min(1, 'talent name must not be empty'),
-  envelope: cadenceEnvelopeSchema,
-});
 
 /* ------------------------------------------------------------------ *
  * Structural rules a schema cannot express
