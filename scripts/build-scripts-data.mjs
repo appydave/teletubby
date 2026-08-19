@@ -24,7 +24,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { CADENCE, MAJORS, SET, TALENTS } from './authored-domain.mjs';
+import { CADENCE, MAJORS, SET, TALENTS, TRIGGER_SETS } from './authored-domain.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = join(here, '..');
@@ -328,13 +328,13 @@ function buildTopics(n, majors, minorHeadings, paragraphs, label) {
 }
 
 /**
- * The authored bullets are ONE trigger style, and it is style B — phrases
+ * The bullets in `AUTHORED` are ONE trigger style, and it is style B — phrases
  * compressed out of the paragraph, not lifted verbatim (A) and not loose
- * keywords (C). Labelling it honestly matters: A and C are deliberately absent
- * because nothing has authored them yet, and the app never invents a trigger.
- * They arrive through `write_trigger_set`.
+ * keywords (C). Labelling it honestly matters: it is the one specimen that
+ * survived the original Kybernesis prompter, and no video has ever been shot
+ * from it.
  */
-function buildTriggerSet(authored, paragraphIds) {
+function buildLegacyStyleB(authored, paragraphIds) {
   return {
     style: 'compressed-concept',
     authoredBy: 'hand',
@@ -345,6 +345,47 @@ function buildTriggerSet(authored, paragraphIds) {
       paragraphId: paragraphIds[authored.map[index] - 1],
     })),
   };
+}
+
+/**
+ * The A/B/C sets authored in `TRIGGER_SETS`, for one script and one corpus.
+ *
+ * Validated hard, because the map is authored data and can be wrong in ways a
+ * positional scheme cannot: every paragraph number must exist, the sequence
+ * must not rewind, and the set must span the transcript — a trigger set that
+ * stops short leaves a paragraph unreachable by stepping, which the talent
+ * discovers mid-take.
+ */
+function buildAuthoredSets(n, corpus, paragraphIds, label) {
+  const authored = (TRIGGER_SETS[n] || {})[corpus];
+  if (!authored) return [];
+
+  return Object.entries(authored).map(([style, rows]) => {
+    const fail = (msg) => {
+      throw new Error(`${label} · ${style}: ${msg}`);
+    };
+    if (rows.length < 2) fail('a trigger set needs at least two steps');
+    if (rows[0][1] !== 1) fail(`opens on paragraph ${rows[0][1]} — must open on the first`);
+    if (rows[rows.length - 1][1] !== paragraphIds.length)
+      fail(`lands on paragraph ${rows[rows.length - 1][1]} — must land on the last`);
+    for (let i = 1; i < rows.length; i++) {
+      if (rows[i][1] < rows[i - 1][1]) fail(`goes backwards at step ${i + 1}`);
+    }
+    for (const [, p] of rows) {
+      if (p < 1 || p > paragraphIds.length) fail(`points at paragraph ${p}, out of range`);
+    }
+
+    return {
+      style,
+      authoredBy: 'hand',
+      note: 'Candidate for the trigger-style experiment. Settled by recording takes, never by argument — North Star open item 1.',
+      triggers: rows.map(([text, paragraph], index) => ({
+        id: `g${index + 1}`,
+        text,
+        paragraphId: paragraphIds[paragraph - 1],
+      })),
+    };
+  });
 }
 
 const domainScripts = source.map((v) => {
@@ -374,7 +415,10 @@ const domainScripts = source.map((v) => {
       talentId: null,
       source: 'src/shared/data/kybernesis-phase-1.source.json — Tom Lane’s Phase 1 handover',
       topics,
-      triggerSets: [buildTriggerSet(authored, paragraphIds)],
+      triggerSets: [
+        buildLegacyStyleB(authored, paragraphIds),
+        ...buildAuthoredSets(v.n, 'tom-original', paragraphIds, `${label} tom-original`),
+      ],
     },
   ];
 
@@ -387,6 +431,9 @@ const domainScripts = source.map((v) => {
       cadence.paragraphs,
       `${label} (${cadence.corpus})`,
     );
+    const cadenceParagraphIds = cadenceTopics.flatMap((major) =>
+      major.minors.flatMap((minor) => minor.paragraphs.map((p) => p.id)),
+    );
     transcripts.push({
       id: cadence.corpus,
       kind: 'cadence',
@@ -396,11 +443,17 @@ const domainScripts = source.map((v) => {
       talentId: 'david',
       source: cadence.source,
       topics: cadenceTopics,
-      // No trigger set. Triggers derived from Tom's 7-word breath groups are a
-      // DIFFERENT experiment from triggers derived from the 11-word rewrite
-      // (requirements open item 9). Authoring them is an agent's job, and
-      // inventing them here would silently settle the question.
-      triggerSets: [],
+      // Triggers derived from Tom's 7-word breath groups are a DIFFERENT
+      // experiment from triggers derived from the 11-word rewrite
+      // (requirements open item 9). Carrying both is what makes it one
+      // two-axis experiment — which cadence AND which style — instead of two
+      // sequential ones.
+      triggerSets: buildAuthoredSets(
+        v.n,
+        cadence.corpus,
+        cadenceParagraphIds,
+        `${label} ${cadence.corpus}`,
+      ),
     });
   }
 
@@ -446,6 +499,20 @@ writeFileSync(
 const cadenceCount = domainScripts.filter((s) =>
   s.transcripts.some((t) => t.kind === 'cadence'),
 ).length;
-console.log(
-  `✓ wrote src/shared/script-set.ts — ${domainScripts.length} scripts, ${cadenceCount} with a cadence transcript, ${TALENTS.length} talent(s)`,
+const styleCount = domainScripts.reduce(
+  (sum, s) => sum + s.transcripts.reduce((n, t) => n + t.triggerSets.length, 0),
+  0,
 );
+console.log(
+  `✓ wrote src/shared/script-set.ts — ${domainScripts.length} scripts, ${cadenceCount} with a cadence transcript, ${styleCount} trigger sets, ${TALENTS.length} talent(s)`,
+);
+for (const s of domainScripts) {
+  for (const t of s.transcripts) {
+    if (t.triggerSets.length === 0) continue;
+    console.log(
+      `  ${String(s.n).padStart(2, '0')} ${t.id.padEnd(13)} ${t.triggerSets
+        .map((x) => `${x.style}(${x.triggers.length})`)
+        .join(' · ')}`,
+    );
+  }
+}

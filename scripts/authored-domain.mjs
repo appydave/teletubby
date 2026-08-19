@@ -207,3 +207,110 @@ export const SET = {
   description:
     'The twelve Phase 1 explainers handed over by Tom Lane. Provenance transcripts are his approved originals; scripts 1–3 also carry a re-cadenced transcript voiced for David.',
 };
+
+/**
+ * TRIGGER SETS — the A/B/C experiment, authored by hand.
+ *
+ * Keyed `script number → corpus → style`, each entry `[text, paragraphNumber]`
+ * with a 1-based paragraph index into THAT transcript.
+ *
+ * ⚠️ **These are candidates to be tested on camera, not an answer.** The North
+ * Star is explicit that what a trigger word actually is gets settled by the
+ * talent recording takes, and *never by argument*. Nothing here settles it.
+ * Throwing a set out costs one edit to this file.
+ *
+ * The three styles, from requirements §5 — each has a scenario it is right for,
+ * which is why all three exist rather than one winning:
+ *
+ *   A · near-verbatim      phrases lifted from the paragraph. You are cast as
+ *                          the expert but do not know the topic, so you have to
+ *                          read. You will look somewhat like you are reading;
+ *                          that trade is accepted deliberately.
+ *   B · compressed concept the idea reduced to a few words. The transcript is
+ *                          good and you want to say it, you just need the words
+ *                          in the right order.
+ *   C · loose keywords     hooks that may appear nowhere in the paragraph. You
+ *                          know the topic cold and only need keeping on track.
+ *
+ * **One rule holds across every style**: the last trigger carries the approved
+ * takeaway. Whatever is on screen, the last thing you see is the line you have
+ * to land — and `test/domain.test.ts` holds every set to it.
+ *
+ * ⚠️ **Style C is deliberately identical across both corpora.** Loose keywords
+ * are hooks that need not appear in the text at all, so re-cadencing the words
+ * underneath does not change them. That is a real property of the experiment,
+ * not an oversight: if C wins, the cadence rewrite did not matter; if A wins,
+ * it mattered most. Do not vary C artificially to make the grid look symmetric.
+ */
+export const TRIGGER_SETS = {
+  1: {
+    'tom-original': {
+      'near-verbatim': [
+        ["So here's a question —", 1],
+        ["you've got an AI assistant at work", 1],
+        ['it can answer just about anything you ask it', 1],
+        ['but can it actually go and do the job?', 1],
+        ["That's the gap we keep running into.", 1],
+        ['What Kybernesis builds is a full agent system', 2],
+        ['agent is one of those words everyone uses differently', 2],
+        ['just software that can take an action on your behalf', 2],
+        ['not only answer a question', 2],
+        ['the way we start is with one agent', 3],
+        ["solving one problem that's genuinely worth solving", 3],
+        ['underneath it we put a shared foundation', 3],
+        ['memory, permissions, tools, coordination', 3],
+        ['once that foundation is there', 3],
+        ['the second agent and the third agent plug into it', 3],
+        ['rather than starting over', 3],
+        ['So you get to start small without thinking small.', 4],
+      ],
+      'loose-keywords': [
+        ['THE GAP', 1],
+        ['AGENT = TAKES ACTION', 2],
+        ['ONE AGENT, SHARED FOUNDATION', 3],
+        ['TWO AND THREE PLUG IN', 3],
+        ['START SMALL WITHOUT THINKING SMALL.', 4],
+      ],
+    },
+    'v01-rewrite': {
+      'near-verbatim': [
+        ["So here's a question.", 1],
+        ["You've got an AI assistant at work", 1],
+        ["it'll answer just about anything you ask it", 1],
+        ['but can it actually go and do the job?', 1],
+        ["That's the gap.", 1],
+        ['What Kybernesis builds is a full agent system', 2],
+        ['I want to gloss that word agent for a second', 2],
+        ['because everyone uses it differently', 2],
+        ['software that can take an action on your behalf', 2],
+        ['and not only answer a question', 2],
+        ['the way we start is with one agent', 3],
+        ["solving one problem that's genuinely worth solving", 3],
+        ['and then underneath it we put a shared foundation', 3],
+        ['your memory and your permissions and your tools', 3],
+        ['once the foundation is there', 3],
+        ['the second agent and the third agent just plug into it', 3],
+        ['instead of starting over', 3],
+        ['So you get to start small without thinking small.', 4],
+      ],
+      'compressed-concept': [
+        ["YOU'VE GOT AN ASSISTANT — CAN IT DO THE JOB?", 1],
+        ['Answers anything you ask', 1],
+        ["Can't go and do it", 1],
+        ['An agent acts, not just answers', 2],
+        ['Everyone uses the word differently', 2],
+        ['Start with one agent worth having', 3],
+        ['Underneath: memory, permissions, tools, coordination', 3],
+        ['Two and three plug in, not start over', 3],
+        ['START SMALL WITHOUT THINKING SMALL.', 4],
+      ],
+      'loose-keywords': [
+        ['THE GAP', 1],
+        ['AGENT = TAKES ACTION', 2],
+        ['ONE AGENT, SHARED FOUNDATION', 3],
+        ['TWO AND THREE PLUG IN', 3],
+        ['START SMALL WITHOUT THINKING SMALL.', 4],
+      ],
+    },
+  },
+};

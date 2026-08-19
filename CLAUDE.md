@@ -40,9 +40,22 @@ Background: [docs/concept.md](docs/concept.md) · origin brainstorm
 **The legacy flat `src/shared/scripts.ts` is gone**, along with its test. One generated shape,
 one authoring source.
 
-⚠️ **Trigger styles A and C are still unauthored for every script**, and the re-cadenced
-transcripts have no trigger set at all. That is session 3, and it is why the app opens on Tom's
-originals even for scripts 1–3 — a transcript with no triggers cannot be driven.
+⚠️ **The trigger words are CANDIDATES, not an answer.** The North Star rules that what a trigger
+word actually is gets settled by the talent recording takes, and never by argument. Every set in
+`scripts/authored-domain.mjs` is there to be tested and thrown out cheaply.
+
+3. **The A/B/C experiment** (session 3) — script 01 carries all three styles on **both**
+   corpora, so the talent can move one variable at a time: which cadence, and which trigger
+   style. Six combinations, six takes.
+
+⚠️ **Scripts 02–12 still carry only the style-B specimen**, and their re-cadenced transcripts
+have no trigger set. That is deliberate — six takes answers the blocking question and 72
+trigger sets nobody shoots does not. Author more only once script 01 has been recorded.
+
+⚠️ **The renderer loads once, at startup.** An agent writing a trigger set through the API does
+NOT appear in a running window — the store changed, the UI did not. Restart to pick it up. This
+is the Event primitive being earned: a client reduced to polling (or restarting) is the signal
+that it is time to add one.
 
 **Explicitly NOT built, and not to be added without asking:**
 the AI layer (live listening, waffle detection, sync-to-voice, trigger *generation*),
@@ -99,7 +112,7 @@ The app must be running — the surface lives in its process. Port and token com
 ```bash
 npm install        # npm ONLY — packageManager is pinned; pnpm blocks Electron's postinstall
 npm run dev        # Electron app; renderer on 7110, control API on 7111 (registered slots)
-npm test           # 151 tests
+npm test           # 153 tests
 npm run typecheck
 ```
 

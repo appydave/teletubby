@@ -82,19 +82,42 @@ describe('the shipped Kybernesis set', () => {
     }
   });
 
-  it('labels its one trigger set honestly, and invents no others', () => {
-    // The app never invents a trigger. Styles A and C are absent because
-    // nothing has authored them — they arrive through `write_trigger_set`.
-    for (const script of KYBERNESIS_PHASE_1.scripts) {
+  it('carries all three styles on both corpora for script 01, and invents none elsewhere', () => {
+    // The two-axis experiment on real material: which cadence AND which style.
+    // Script 01 is the only one authored so far — deliberately, because six
+    // takes answers the question and 72 trigger sets nobody shoots does not.
+    const one = KYBERNESIS_PHASE_1.scripts[0];
+    for (const transcript of one.transcripts) {
+      expect(transcript.triggerSets.map((t) => TRIGGER_STYLE_LETTER[t.style]).sort()).toEqual([
+        'A',
+        'B',
+        'C',
+      ]);
+      expect(transcript.triggerSets.every((t) => t.authoredBy === 'hand')).toBe(true);
+    }
+
+    // Everywhere else still carries only the surviving style-B specimen. The
+    // app never invents a trigger; the rest arrive by authoring.
+    for (const script of KYBERNESIS_PHASE_1.scripts.slice(1)) {
       const sets = provenanceOf(script)!.triggerSets;
       expect(sets).toHaveLength(1);
-      expect(sets[0].style).toBe('compressed-concept');
       expect(TRIGGER_STYLE_LETTER[sets[0].style]).toBe('B');
-      expect(sets[0].authoredBy).toBe('hand');
     }
-    for (const n of [1, 2, 3]) {
+    for (const n of [2, 3]) {
       expect(cadenceFor(KYBERNESIS_PHASE_1.scripts[n - 1], 'david')[0].triggerSets).toEqual([]);
     }
+  });
+
+  it('gives each style its own step count over the same paragraphs', () => {
+    // The whole reason the map belongs to the trigger set. A is dense enough to
+    // read from; C is five hooks. Both span the same four paragraphs.
+    const provenance = provenanceOf(KYBERNESIS_PHASE_1.scripts[0])!;
+    const counts = Object.fromEntries(
+      provenance.triggerSets.map((t) => [TRIGGER_STYLE_LETTER[t.style], t.triggers.length]),
+    );
+    expect(counts.A).toBeGreaterThan(counts.B);
+    expect(counts.B).toBeGreaterThan(counts.C);
+    expect(paragraphsOf(provenance)).toHaveLength(4);
   });
 
   it('has a summary short enough that twelve are scannable in one sitting', () => {
@@ -115,17 +138,23 @@ describe('the shipped Kybernesis set', () => {
         .replace(/[^a-z0-9]+/g, ' ')
         .trim();
 
+    // EVERY set, on every transcript — not just the first. Whatever style the
+    // talent has on screen, the last thing they see is the line they have to
+    // land, so a style that drifts ends the take on the wrong words.
     for (const script of KYBERNESIS_PHASE_1.scripts) {
-      const triggers = provenanceOf(script)!.triggerSets[0].triggers;
-      const landing = norm(triggers[triggers.length - 1].text);
       const takeaway = norm(script.takeaway);
       expect(takeaway.length).toBeGreaterThan(0);
 
-      const overlap = takeaway.split(' ').filter((w) => w.length > 3 && landing.includes(w));
-      expect(
-        overlap.length,
-        `${script.id} landing line drifted from its takeaway`,
-      ).toBeGreaterThanOrEqual(3);
+      for (const transcript of script.transcripts) {
+        for (const set of transcript.triggerSets) {
+          const landing = norm(set.triggers[set.triggers.length - 1].text);
+          const overlap = takeaway.split(' ').filter((w) => w.length > 3 && landing.includes(w));
+          expect(
+            overlap.length,
+            `${script.id} · ${transcript.id} · ${set.style} landing line drifted from the takeaway`,
+          ).toBeGreaterThanOrEqual(3);
+        }
+      }
     }
   });
 

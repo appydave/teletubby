@@ -64,11 +64,20 @@ describe('loading', () => {
     expect(activeTriggers(s()).length).toBeGreaterThan(0);
   });
 
+  it('prefers the talent’s cadence transcript once it can be driven', () => {
+    // Script 01's rewrite now carries all three styles, so it is both the
+    // better opening choice AND a usable one.
+    expect(currentTranscript(s())?.kind).toBe('cadence');
+    expect(currentTranscript(s())?.corpus).toBe('v01-rewrite');
+    expect(activeTriggers(s()).length).toBeGreaterThan(0);
+  });
+
   it('never opens on a transcript with no triggers authored', () => {
-    // Script 1 HAS a cadence transcript and it would otherwise be preferred —
+    // Script 02 HAS a cadence transcript and it would otherwise be preferred —
     // but nobody has authored trigger words for it, and the app never invents
     // them. Opening there would hand the talent an empty column 2, which is
     // the product missing. So it opens on Tom's original instead.
+    s().selectScript(SCRIPT_02);
     expect(currentScript(s())?.transcripts.some((t) => t.kind === 'cadence')).toBe(true);
     expect(currentTranscript(s())?.kind).toBe('provenance');
     expect(activeTriggers(s()).length).toBeGreaterThan(0);
@@ -84,8 +93,6 @@ describe('stepping is clamped inside its unit', () => {
   beforeEach(() => s().selectScript(SCRIPT_01));
 
   it('advances one beat at a time', () => {
-    // Script 1's cadence transcript has no trigger set yet, so drive the
-    // provenance one, which does.
     s().selectTranscript('tom-original');
     s().stepNext();
     expect(s().step).toBe(1);
@@ -113,9 +120,11 @@ describe('stepping is clamped inside its unit', () => {
   });
 
   it('refuses to move at all when a transcript has no triggers authored', () => {
-    // The cadence transcripts ship with no trigger set — the app never invents
-    // one. Stepping must be inert rather than throwing or landing nowhere.
-    s().selectTranscript('v01-rewrite');
+    // Scripts 02 and 03 still ship a cadence transcript with no trigger set —
+    // the app never invents one. Stepping must be inert rather than throwing
+    // or landing nowhere.
+    s().selectScript(SCRIPT_02);
+    s().selectTranscript('v02-rewrite');
     expect(activeTriggers(s())).toEqual([]);
     s().stepNext();
     expect(s().step).toBe(0);
@@ -337,38 +346,29 @@ describe('switching trigger style keeps your place', () => {
   });
 
   it('lands on the same PARAGRAPH, not the same index', () => {
-    const transcript = currentTranscript(s())!;
-    const ids = paragraphsOf(transcript).map((p) => p.id);
+    // Real authored data: style A takes 17 steps over the same four paragraphs
+    // that style C crosses in five. Holding the index across that would drop
+    // the talent somewhere else in the script entirely.
+    const ids = paragraphsOf(currentTranscript(s())!).map((p) => p.id);
+    s().selectStyle('near-verbatim');
 
-    // Author a second style with a different step count over the same
-    // paragraphs — which is the normal case, not a contrived one.
-    transcript.triggerSets.push({
-      style: 'loose-keywords',
-      authoredBy: 'agent',
-      triggers: [
-        { id: 'c1', text: 'THE GAP', paragraphId: ids[0] },
-        { id: 'c2', text: 'FOUNDATION', paragraphId: ids[2] },
-        { id: 'c3', text: 'START SMALL', paragraphId: ids.at(-1)! },
-      ],
-    });
-    useProm.setState({ set: s().set });
-
-    // Step to a beat sitting on paragraph 3.
     const target = activeTriggers(s()).findIndex((t) => t.paragraphId === ids[2]);
+    expect(target).toBeGreaterThan(0);
     useProm.setState({ step: target });
     expect(currentParagraphId(s())).toBe(ids[2]);
 
     s().selectStyle('loose-keywords');
 
     expect(s().style).toBe('loose-keywords');
-    expect(s().step).toBe(1);
-    // The index changed; the place did not. Holding the index would have
-    // dropped the talent somewhere else in the script.
+    // The index changed; the place did not.
     expect(currentParagraphId(s())).toBe(ids[2]);
     expect(s().step).not.toBe(target);
   });
 
   it('refuses a style the transcript does not have', () => {
+    // Script 02's provenance carries only style B.
+    s().selectScript(SCRIPT_02);
+    s().selectTranscript('tom-original');
     const before = s().style;
     s().selectStyle('near-verbatim');
     expect(s().style).toBe(before);

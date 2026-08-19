@@ -235,8 +235,8 @@ S7. `packageManager` pinned to `npm@11.11.0` ✅
 11. The full transcript slides from a left **or** right edge, chosen by the talent, without moving the driven zone away from the camera
 12. The window and the zone order can both be arranged so the driven zone sits nearest the lens, on either side
 13. The set view lists every script in the set with a summary, one script visible at a time, reachable by keyboard
-14. All three trigger styles are derived for every script, and switching between them mid-session keeps the beat position
-15. A provenance transcript and a cadence transcript are both viewable and clearly distinguished — **three real pairs already exist** (`phase-1-scripts/v0N-rewrite.txt` + `v0N-tom-original.txt`), so this is partly satisfiable today rather than pending; the build currently loads only the originals
+14. All three trigger styles are derived for every script, and switching between them mid-session keeps the beat position — **partly built:** script 01 carries all three on both corpora, and switching holds the PARAGRAPH rather than the step index. Scripts 02–12 carry style B only, pending a first take
+15. ✅ **Built.** A provenance transcript and a cadence transcript are both viewable and clearly distinguished — **three real pairs already exist** (`phase-1-scripts/v0N-rewrite.txt` + `v0N-tom-original.txt`), so this is partly satisfiable today rather than pending; the build currently loads only the originals
 16. ~~On a take landing in the FliHub queue…~~ **BLOCKED — removed from this spec.** Ruled
     2026-08-19: FliHub cannot be relied on for this yet, it is all future, and it is slated for a
     ground-up rebuild. See requirements §8, which is now marked direction-only. **Replaced by

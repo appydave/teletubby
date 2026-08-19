@@ -85,9 +85,13 @@ describe('reading', () => {
 describe('write_trigger_set — the verb A/B/C depends on', () => {
   const paragraphIds = ['p1', 'p2', 'p3', 'p4'];
 
+  // Script 02 carries only the style-B specimen, so writing A to it is
+  // genuinely "a style the app did not have". Script 01 now ships all three.
+  const SCRIPT_02 = 'kybernesis-phase-1/02';
+
   const styleA = {
     setId: SET,
-    scriptId: SCRIPT,
+    scriptId: SCRIPT_02,
     transcriptId: 'tom-original',
     style: 'near-verbatim',
     triggers: [
@@ -113,7 +117,7 @@ describe('write_trigger_set — the verb A/B/C depends on', () => {
     }>(
       await call('get_transcript', {
         setId: SET,
-        scriptId: SCRIPT,
+        scriptId: SCRIPT_02,
         transcriptId: 'tom-original',
       }),
     );

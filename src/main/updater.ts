@@ -2,13 +2,7 @@ import { autoUpdater } from 'electron-updater';
 import type { Logger } from '@appydave/core';
 
 export type UpdateStatus =
-  | 'idle'
-  | 'checking'
-  | 'available'
-  | 'not-available'
-  | 'downloading'
-  | 'downloaded'
-  | 'error';
+  'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
 
 export interface UpdateState {
   status: UpdateStatus;

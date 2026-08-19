@@ -139,6 +139,130 @@ export const KYBERNESIS_PHASE_1: ScriptSet = {
                   "paragraphId": "p4"
                 }
               ]
+            },
+            {
+              "style": "near-verbatim",
+              "authoredBy": "hand",
+              "note": "Candidate for the trigger-style experiment. Settled by recording takes, never by argument — North Star open item 1.",
+              "triggers": [
+                {
+                  "id": "g1",
+                  "text": "So here's a question —",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g2",
+                  "text": "you've got an AI assistant at work",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g3",
+                  "text": "it can answer just about anything you ask it",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g4",
+                  "text": "but can it actually go and do the job?",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g5",
+                  "text": "That's the gap we keep running into.",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g6",
+                  "text": "What Kybernesis builds is a full agent system",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g7",
+                  "text": "agent is one of those words everyone uses differently",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g8",
+                  "text": "just software that can take an action on your behalf",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g9",
+                  "text": "not only answer a question",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g10",
+                  "text": "the way we start is with one agent",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g11",
+                  "text": "solving one problem that's genuinely worth solving",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g12",
+                  "text": "underneath it we put a shared foundation",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g13",
+                  "text": "memory, permissions, tools, coordination",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g14",
+                  "text": "once that foundation is there",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g15",
+                  "text": "the second agent and the third agent plug into it",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g16",
+                  "text": "rather than starting over",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g17",
+                  "text": "So you get to start small without thinking small.",
+                  "paragraphId": "p4"
+                }
+              ]
+            },
+            {
+              "style": "loose-keywords",
+              "authoredBy": "hand",
+              "note": "Candidate for the trigger-style experiment. Settled by recording takes, never by argument — North Star open item 1.",
+              "triggers": [
+                {
+                  "id": "g1",
+                  "text": "THE GAP",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g2",
+                  "text": "AGENT = TAKES ACTION",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g3",
+                  "text": "ONE AGENT, SHARED FOUNDATION",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g4",
+                  "text": "TWO AND THREE PLUG IN",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g5",
+                  "text": "START SMALL WITHOUT THINKING SMALL.",
+                  "paragraphId": "p4"
+                }
+              ]
             }
           ]
         },
@@ -208,7 +332,189 @@ export const KYBERNESIS_PHASE_1: ScriptSet = {
               ]
             }
           ],
-          "triggerSets": []
+          "triggerSets": [
+            {
+              "style": "near-verbatim",
+              "authoredBy": "hand",
+              "note": "Candidate for the trigger-style experiment. Settled by recording takes, never by argument — North Star open item 1.",
+              "triggers": [
+                {
+                  "id": "g1",
+                  "text": "So here's a question.",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g2",
+                  "text": "You've got an AI assistant at work",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g3",
+                  "text": "it'll answer just about anything you ask it",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g4",
+                  "text": "but can it actually go and do the job?",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g5",
+                  "text": "That's the gap.",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g6",
+                  "text": "What Kybernesis builds is a full agent system",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g7",
+                  "text": "I want to gloss that word agent for a second",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g8",
+                  "text": "because everyone uses it differently",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g9",
+                  "text": "software that can take an action on your behalf",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g10",
+                  "text": "and not only answer a question",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g11",
+                  "text": "the way we start is with one agent",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g12",
+                  "text": "solving one problem that's genuinely worth solving",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g13",
+                  "text": "and then underneath it we put a shared foundation",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g14",
+                  "text": "your memory and your permissions and your tools",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g15",
+                  "text": "once the foundation is there",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g16",
+                  "text": "the second agent and the third agent just plug into it",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g17",
+                  "text": "instead of starting over",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g18",
+                  "text": "So you get to start small without thinking small.",
+                  "paragraphId": "p4"
+                }
+              ]
+            },
+            {
+              "style": "compressed-concept",
+              "authoredBy": "hand",
+              "note": "Candidate for the trigger-style experiment. Settled by recording takes, never by argument — North Star open item 1.",
+              "triggers": [
+                {
+                  "id": "g1",
+                  "text": "YOU'VE GOT AN ASSISTANT — CAN IT DO THE JOB?",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g2",
+                  "text": "Answers anything you ask",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g3",
+                  "text": "Can't go and do it",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g4",
+                  "text": "An agent acts, not just answers",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g5",
+                  "text": "Everyone uses the word differently",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g6",
+                  "text": "Start with one agent worth having",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g7",
+                  "text": "Underneath: memory, permissions, tools, coordination",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g8",
+                  "text": "Two and three plug in, not start over",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g9",
+                  "text": "START SMALL WITHOUT THINKING SMALL.",
+                  "paragraphId": "p4"
+                }
+              ]
+            },
+            {
+              "style": "loose-keywords",
+              "authoredBy": "hand",
+              "note": "Candidate for the trigger-style experiment. Settled by recording takes, never by argument — North Star open item 1.",
+              "triggers": [
+                {
+                  "id": "g1",
+                  "text": "THE GAP",
+                  "paragraphId": "p1"
+                },
+                {
+                  "id": "g2",
+                  "text": "AGENT = TAKES ACTION",
+                  "paragraphId": "p2"
+                },
+                {
+                  "id": "g3",
+                  "text": "ONE AGENT, SHARED FOUNDATION",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g4",
+                  "text": "TWO AND THREE PLUG IN",
+                  "paragraphId": "p3"
+                },
+                {
+                  "id": "g5",
+                  "text": "START SMALL WITHOUT THINKING SMALL.",
+                  "paragraphId": "p4"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
