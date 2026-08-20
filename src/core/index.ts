@@ -49,8 +49,25 @@ export interface InvokeOptions {
   idempotencyKey?: string;
 }
 
+/**
+ * Emitted after a command actually CHANGES something — not on a query, not on a
+ * dry run, not on a refused call.
+ *
+ * This is the Event primitive, and it was earned rather than assumed: the
+ * renderer loads once at startup, so an agent authoring a trigger set left the
+ * store changed and the window stale. A client reduced to restarting is exactly
+ * the signal that an event belongs here (capability-model.md §1).
+ */
+export interface ChangeEvent {
+  capability: string;
+  principal: Principal;
+  at: number;
+}
+
 export interface Core {
   invoke(name: string, input: unknown, options: InvokeOptions): Promise<InvokeResult>;
+  /** Subscribe to state changes. Returns an unsubscribe function. */
+  onChange(listener: (event: ChangeEvent) => void): () => void;
   /** The renderer's own selection state, so the UI can drive it directly. */
   readonly active: ActiveContextHolder;
   readonly audit: AuditLog;
@@ -65,6 +82,7 @@ export function createCore(options: CoreOptions): Core {
   const limiter = new RateLimiter(clock);
   const audit = new AuditLog(1000, options.auditSink);
   const handlers = createHandlers();
+  const listeners = new Set<(event: ChangeEvent) => void>();
 
   async function invoke(
     name: string,
@@ -143,6 +161,21 @@ export function createCore(options: CoreOptions): Core {
         idempotency.remember(name, idempotencyKey, data);
 
       record(true, { dryRun });
+
+      // Announce only a real change. A query, a dry run and a refused call all
+      // leave the store exactly as it was, and waking every client for those
+      // would train them to ignore the event.
+      if (capability.kind === 'command' && !dryRun && didApply(data)) {
+        const event: ChangeEvent = { capability: name, principal, at: clock() };
+        for (const listener of listeners) {
+          try {
+            listener(event);
+          } catch {
+            // A broken listener must not fail the caller's write.
+          }
+        }
+      }
+
       return { ok: true, data };
     } catch (error) {
       if (error instanceof CapabilityFailure) {
@@ -160,7 +193,24 @@ export function createCore(options: CoreOptions): Core {
     }
   }
 
-  return { invoke, active, audit, repository: options.repository };
+  return {
+    invoke,
+    onChange(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    active,
+    audit,
+    repository: options.repository,
+  };
+}
+
+/**
+ * A command returns `{ applied: false, ... }` when it previewed instead of
+ * acting. Anything else that reached the end of a handler changed something.
+ */
+function didApply(data: unknown): boolean {
+  return !(data && typeof data === 'object' && (data as { applied?: unknown }).applied === false);
 }
 
 export { MemoryRepository, FileRepository, seed, EMPTY_DOCUMENT } from './repository.js';

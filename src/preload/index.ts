@@ -3,6 +3,7 @@ import {
   IPC,
   type AppInfo,
   type AppytronApi,
+  type ControlChanged,
   type ControlStatus,
   type InvokePayload,
 } from '../shared/ipc';
@@ -15,6 +16,14 @@ const api: AppytronApi = {
   invoke: <T>(payload: InvokePayload): Promise<InvokeResult<T>> =>
     ipcRenderer.invoke(IPC.controlInvoke, payload),
   getControlStatus: (): Promise<ControlStatus> => ipcRenderer.invoke(IPC.controlStatus),
+  onControlChanged: (listener) => {
+    // The listener never sees the raw IpcRendererEvent — handing the renderer
+    // an object with a `sender` on it would punch a hole straight through
+    // contextIsolation.
+    const wrapped = (_event: unknown, payload: ControlChanged): void => listener(payload);
+    ipcRenderer.on(IPC.controlChanged, wrapped);
+    return () => ipcRenderer.removeListener(IPC.controlChanged, wrapped);
+  },
 };
 
 // The ONLY door: expose a minimal, typed API on window.appytron.

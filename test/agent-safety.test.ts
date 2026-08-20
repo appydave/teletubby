@@ -334,6 +334,63 @@ describe('active context', () => {
   });
 });
 
+describe('the change event', () => {
+  const collect = (): { events: { capability: string; principal: string }[] } => {
+    const events: { capability: string; principal: string }[] = [];
+    core.onChange((e) => events.push({ capability: e.capability, principal: e.principal }));
+    return { events };
+  };
+
+  it('fires when a command actually changes something', async () => {
+    const { events } = collect();
+    await asAgent('update_script', { setId: SET, scriptId: SCRIPT, title: 'Renamed' });
+    expect(events).toEqual([{ capability: 'update_script', principal: 'agent' }]);
+  });
+
+  it('stays quiet on a query', async () => {
+    const { events } = collect();
+    await asAgent('get_set', { setId: SET });
+    await asAgent('list_talents');
+    expect(events).toEqual([]);
+  });
+
+  it('stays quiet on a dry run', async () => {
+    // Nothing changed, so waking every client would train them to ignore it.
+    const { events } = collect();
+    await asAgent('update_script', { setId: SET, scriptId: SCRIPT, title: 'x', dryRun: true });
+    expect(events).toEqual([]);
+  });
+
+  it('stays quiet on a destructive verb that only previewed', async () => {
+    const { events } = collect();
+    await asAgent('delete_script', { setId: SET, scriptId: SCRIPT });
+    expect(events).toEqual([]);
+  });
+
+  it('stays quiet on a refused call', async () => {
+    const { events } = collect();
+    await asAgent('set_active_context', { scriptId: SCRIPT });
+    expect(events).toEqual([]);
+  });
+
+  it('unsubscribes cleanly', async () => {
+    const events: string[] = [];
+    const off = core.onChange((e) => events.push(e.capability));
+    await asAgent('update_script', { setId: SET, scriptId: SCRIPT, title: 'one' });
+    off();
+    await asAgent('update_script', { setId: SET, scriptId: SCRIPT, title: 'two' });
+    expect(events).toEqual(['update_script']);
+  });
+
+  it('does not let a broken listener fail the caller’s write', async () => {
+    core.onChange(() => {
+      throw new Error('listener exploded');
+    });
+    const result = await asAgent('update_script', { setId: SET, scriptId: SCRIPT, title: 'ok' });
+    expect(result.ok).toBe(true);
+  });
+});
+
 describe('unknown capabilities', () => {
   it('never make the caller guess', async () => {
     const result = await asAgent('delete_everything');

@@ -95,6 +95,15 @@ const desktop = createConsole({
         ),
     });
 
+    // Push a change to every open window, so an agent authoring a trigger set
+    // through the control API shows up in front of the talent without a
+    // restart. The renderer decides what to do with it; main just relays.
+    core.onChange((event) => {
+      for (const win of windows.all()) {
+        if (!win.isDestroyed()) win.webContents.send(IPC.controlChanged, event);
+      }
+    });
+
     const seeded = await seed(repository, [KYBERNESIS_PHASE_1], TALENTS);
     if (seeded.setsAdded.length > 0 || seeded.talentsAdded.length > 0)
       logger.info(seeded, 'seeded store');

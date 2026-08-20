@@ -38,6 +38,7 @@ const PRESET_LABEL: Record<TextPreset, string> = {
 export default function App(): JSX.Element {
   const set = useProm((s) => s.set);
   const load = useProm((s) => s.load);
+  const refresh = useProm((s) => s.refresh);
   const [failure, setFailure] = useState<string | null>(null);
 
   /**
@@ -51,17 +52,19 @@ export default function App(): JSX.Element {
    */
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+
+    const fetchSet = async (apply: (set: ScriptSet) => void): Promise<void> => {
       const result = await window.appytron.invoke<{ sets: { id: string }[] }>({
         capability: 'list_sets',
       });
+      if (cancelled) return;
       if (!result.ok) {
-        if (!cancelled) setFailure(result.error.message);
+        setFailure(result.error.message);
         return;
       }
       const first = result.data.sets[0];
       if (!first) {
-        if (!cancelled) setFailure('No script sets in the store.');
+        setFailure('No script sets in the store.');
         return;
       }
       const full = await window.appytron.invoke<ScriptSet>({
@@ -73,12 +76,24 @@ export default function App(): JSX.Element {
         setFailure(full.error.message);
         return;
       }
-      load(full.data);
-    })();
+      setFailure(null);
+      apply(full.data);
+    };
+
+    void fetchSet(load);
+
+    // An agent writing through the control API lands here. `refresh` swaps the
+    // data without moving the talent — the alternative is that someone editing
+    // a trigger word yanks the person on camera back to the top of script 01.
+    const unsubscribe = window.appytron.onControlChanged(() => {
+      void fetchSet(refresh);
+    });
+
     return () => {
       cancelled = true;
+      unsubscribe();
     };
-  }, [load]);
+  }, [load, refresh]);
 
   if (failure) return <Waiting message={failure} failed />;
   if (!set) return <Waiting message="Loading the set…" />;

@@ -24,6 +24,12 @@ export const IPC = {
   controlInvoke: 'control:invoke',
   /** Where the agent surface is listening, so the UI can show it to David. */
   controlStatus: 'control:status',
+  /**
+   * Main → renderer. Fired when a command changed the store, so a window can
+   * pick up an agent's edit without being restarted. The only push channel;
+   * everything else is request/response.
+   */
+  controlChanged: 'control:changed',
 } as const;
 
 export interface AppInfo {
@@ -46,6 +52,12 @@ export interface ControlStatus {
   discoveryPath: string | null;
 }
 
+export interface ControlChanged {
+  capability: string;
+  principal: 'ui' | 'agent';
+  at: number;
+}
+
 export interface InvokePayload {
   capability: string;
   input?: unknown;
@@ -57,4 +69,6 @@ export interface AppytronApi {
   getAppInfo(): Promise<AppInfo>;
   invoke<T = unknown>(payload: InvokePayload): Promise<InvokeResult<T>>;
   getControlStatus(): Promise<ControlStatus>;
+  /** Subscribe to store changes. Returns an unsubscribe function. */
+  onControlChanged(listener: (event: ControlChanged) => void): () => void;
 }

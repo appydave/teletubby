@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { KYBERNESIS_PHASE_1 } from '@shared/script-set';
-import { paragraphsOf } from '@shared/domain';
+import { paragraphsOf, type ScriptSet } from '@shared/domain';
 import {
   RECORDING_SET,
   activeTriggers,
@@ -387,6 +387,104 @@ describe('the end card', () => {
   it('names what comes next', () => {
     s().selectScript(SCRIPT_01);
     expect(nextScript(s())?.title).toBe('Why AI pilots become dead ends');
+  });
+});
+
+describe('a refresh must never move the talent', () => {
+  /**
+   * This fires when an agent writes through the control API — which is the
+   * point of the app being drivable, and also the moment it could ruin a take.
+   * Rewriting a trigger word must not yank the person on camera somewhere else.
+   */
+  const edited = (mutate: (set: ScriptSet) => void): ScriptSet => {
+    const copy: ScriptSet = JSON.parse(JSON.stringify(s().set));
+    mutate(copy);
+    return copy;
+  };
+
+  beforeEach(() => {
+    s().selectScript(SCRIPT_02);
+    s().selectTranscript('tom-original');
+    s().stepNext();
+    s().stepNext();
+    useProm.setState({ cue: null });
+  });
+
+  it('holds the script, corpus, style and beat when data changes elsewhere', () => {
+    const before = {
+      scriptId: s().scriptId,
+      transcriptId: s().transcriptId,
+      style: s().style,
+      step: s().step,
+    };
+
+    s().refresh(
+      edited((set) => {
+        set.scripts[0].title = 'Rewritten by an agent';
+      }),
+    );
+
+    expect({
+      scriptId: s().scriptId,
+      transcriptId: s().transcriptId,
+      style: s().style,
+      step: s().step,
+    }).toEqual(before);
+  });
+
+  it('does not flash a cue card when nothing moved', () => {
+    // A cue announces a boundary the TALENT crossed. Data changing underneath
+    // is not a crossing, and a card on every keystroke of an agent's edit is
+    // noise on camera.
+    s().refresh(edited((set) => void (set.scripts[0].summary = 'edited')));
+    expect(s().cue).toBeNull();
+  });
+
+  it('picks up an agent’s new trigger words at the same beat', () => {
+    const step = s().step;
+    s().refresh(
+      edited((set) => {
+        const transcript = set.scripts[1].transcripts.find((t) => t.id === 'tom-original')!;
+        transcript.triggerSets[0].triggers[step].text = 'REWRITTEN MID-TAKE';
+      }),
+    );
+    expect(s().step).toBe(step);
+    expect(activeTriggers(s())[step].text).toBe('REWRITTEN MID-TAKE');
+  });
+
+  it('clamps rather than resets when the trigger set gets shorter', () => {
+    // A shortened set is not a reason to send the talent back to the top.
+    s().refresh(
+      edited((set) => {
+        const transcript = set.scripts[1].transcripts.find((t) => t.id === 'tom-original')!;
+        transcript.triggerSets[0].triggers = transcript.triggerSets[0].triggers.slice(0, 2);
+      }),
+    );
+    expect(s().step).toBe(1);
+  });
+
+  it('falls back to a style that still exists, keeping the transcript', () => {
+    s().refresh(
+      edited((set) => {
+        const transcript = set.scripts[1].transcripts.find((t) => t.id === 'tom-original')!;
+        transcript.triggerSets[0].style = 'loose-keywords';
+      }),
+    );
+    expect(s().transcriptId).toBe('tom-original');
+    expect(s().style).toBe('loose-keywords');
+  });
+
+  it('announces it, and only then, if the talent’s script was deleted', () => {
+    s().refresh(edited((set) => void set.scripts.splice(1, 1)));
+    // This one genuinely moved them, so it has to say so.
+    expect(s().scriptId).toBe(SCRIPT_01);
+    expect(s().cue).not.toBeNull();
+  });
+
+  it('loads from scratch if nothing was selected yet', () => {
+    useProm.setState({ scriptId: null });
+    s().refresh(JSON.parse(JSON.stringify(KYBERNESIS_PHASE_1)));
+    expect(s().scriptId).toBe(SCRIPT_01);
   });
 });
 

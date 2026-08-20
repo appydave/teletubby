@@ -52,10 +52,20 @@ word actually is gets settled by the talent recording takes, and never by argume
 have no trigger set. That is deliberate — six takes answers the blocking question and 72
 trigger sets nobody shoots does not. Author more only once script 01 has been recorded.
 
-⚠️ **The renderer loads once, at startup.** An agent writing a trigger set through the API does
-NOT appear in a running window — the store changed, the UI did not. Restart to pick it up. This
-is the Event primitive being earned: a client reduced to polling (or restarting) is the signal
-that it is time to add one.
+### Live edits reach the window — the loop this app exists for
+
+An agent writing through the control API shows up **in front of the talent immediately**, with no
+restart. `core.onChange` fires on a real change, main pushes it to every window on
+`control:changed`, and the renderer re-fetches.
+
+**The rule that matters more than the mechanism: a refresh must never move the talent.** Someone
+rewriting a trigger word must not yank the person on camera to a different script, corpus or
+beat. `store.refresh()` keeps every part of the selection that still exists, clamps the step
+rather than resetting it, and raises a cue card **only** if the refresh genuinely moved them —
+a cue announces a boundary the talent crossed, and data changing underneath is not a crossing.
+
+The event fires on a real change only: never on a query, a dry run, a preview, or a refused
+call. Waking every client for those trains them to ignore it.
 
 **Explicitly NOT built, and not to be added without asking:**
 the AI layer (live listening, waffle detection, sync-to-voice, trigger *generation*),
@@ -112,7 +122,7 @@ The app must be running — the surface lives in its process. Port and token com
 ```bash
 npm install        # npm ONLY — packageManager is pinned; pnpm blocks Electron's postinstall
 npm run dev        # Electron app; renderer on 7110, control API on 7111 (registered slots)
-npm test           # 153 tests
+npm test           # 167 tests
 npm run typecheck
 ```
 

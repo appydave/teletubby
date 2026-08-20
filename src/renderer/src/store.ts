@@ -108,6 +108,7 @@ interface PrompterState {
   nudge: number;
 
   load: (set: ScriptSet) => void;
+  refresh: (set: ScriptSet) => void;
   stepNext: () => void;
   stepPrev: () => void;
   selectScript: (scriptId: string) => void;
@@ -189,6 +190,64 @@ export const useProm = create<PrompterState>((set, get) => ({
       transcriptId: transcript?.id ?? null,
       style: defaultStyle(transcript),
       step: 0,
+    });
+  },
+
+  /**
+   * Swap in new data WITHOUT moving the talent.
+   *
+   * This fires when an agent writes through the control API — which is the
+   * whole point of the app being drivable, and also the moment it could ruin a
+   * take. Someone rewriting a trigger word must never yank the person on camera
+   * to a different script, a different corpus, or a different beat.
+   *
+   * So every part of the selection is kept if it still exists, and only what
+   * genuinely vanished falls back. The step is clamped rather than reset,
+   * because a shortened trigger set is not a reason to send them back to the
+   * top of the script.
+   *
+   * A cue card fires ONLY if the refresh actually moved them. A cue announces a
+   * boundary the talent crossed; data changing underneath is not a crossing,
+   * and a card flashing on every keystroke of an agent's edit would be noise.
+   */
+  refresh: (scriptSet) => {
+    const state = get();
+    if (!state.scriptId) {
+      get().load(scriptSet);
+      return;
+    }
+
+    const script = findScript(scriptSet, state.scriptId) ?? scriptSet.scripts[0];
+    if (!script) {
+      set({ set: scriptSet, scriptId: null, transcriptId: null, style: null, step: 0 });
+      return;
+    }
+
+    const moved = script.id !== state.scriptId;
+    const transcript =
+      (state.transcriptId ? findTranscript(script, state.transcriptId) : undefined) ??
+      defaultTranscript(script);
+    const style =
+      state.style && transcript && findTriggerSet(transcript, state.style)
+        ? state.style
+        : defaultStyle(transcript);
+
+    const triggers = transcript && style ? (findTriggerSet(transcript, style)?.triggers ?? []) : [];
+    const step = Math.min(state.step, Math.max(0, triggers.length - 1));
+
+    set({
+      set: scriptSet,
+      scriptId: script.id,
+      transcriptId: transcript?.id ?? null,
+      style,
+      step,
+      cue: moved
+        ? {
+            label: String(script.n).padStart(2, '0'),
+            title: script.title,
+            token: (state.cue?.token ?? 0) + 1,
+          }
+        : state.cue,
     });
   },
 
