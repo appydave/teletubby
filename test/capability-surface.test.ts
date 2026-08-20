@@ -126,6 +126,61 @@ describe('the published capability surface', () => {
   });
 });
 
+/**
+ * AN EXTERNAL CONSUMER EXISTS.
+ *
+ * A KyberAgent at `~/dev/agents/teletubby` calls this control API on
+ * 127.0.0.1:7111 and hardcodes the five verb names below. They are a PUBLISHED
+ * CONTRACT: renaming one silently breaks an agent in a different repository,
+ * and it will be debugged over there as an agent bug.
+ *
+ * The pinning test above already fails on any change to the published set — but
+ * it cannot know that a name has a consumer outside this repo. This block is
+ * that knowledge, written down where a rename will trip over it.
+ *
+ * If one of these has to be renamed: say so first, and change the agent in the
+ * same breath. "I'll update the consumer later" is the same failure as
+ * "I'll do the CLI later".
+ */
+describe('the external consumer contract', () => {
+  const KYBERAGENT_CALLS = [
+    'get_transcript',
+    'get_script',
+    'write_trigger_set',
+    'score_transcript',
+    'approve_pending',
+  ];
+
+  it.each(KYBERAGENT_CALLS)('%s still exists', (name) => {
+    expect(CAPABILITY_BY_NAME.has(name), `~/dev/agents/teletubby calls "${name}"`).toBe(true);
+  });
+
+  it('keeps four of the five reachable from the agent surface', () => {
+    const agent = capabilityNamesFor('agent');
+    for (const name of KYBERAGENT_CALLS.filter((n) => n !== 'approve_pending')) {
+      expect(agent, `the KyberAgent calls "${name}" over HTTP`).toContain(name);
+    }
+  });
+
+  it('deliberately withholds approve_pending from it, and always will', () => {
+    // NOT a rename and NOT an omission. An agent that can approve its own
+    // destructive action has no control on it at all — the exact hole ImageDrip
+    // shipped. The agent surfaces the pendingId to a human; the human approves.
+    expect(CAPABILITY_BY_NAME.get('approve_pending')?.principals).toEqual(['ui']);
+    expect(capabilityNamesFor('agent')).not.toContain('approve_pending');
+  });
+
+  it('means describe_capabilities is authoritative, not advisory', () => {
+    // What the listing returns for a principal is exactly what that principal
+    // may call. A consumer that ignores it and calls anyway gets
+    // permission_denied — every time, by design.
+    const agent = capabilityNamesFor('agent');
+    for (const name of agent) {
+      expect(CAPABILITY_BY_NAME.get(name)?.principals).toContain('agent');
+    }
+  });
+});
+
 describe('every capability carries a usable contract', () => {
   it.each(CAPABILITIES)('$name', (capability) => {
     expect(capability.summary.trim().length).toBeGreaterThan(20);
