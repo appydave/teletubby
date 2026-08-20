@@ -24,11 +24,20 @@ const markerBar = (rank: Rank, active: boolean): string => {
     : 'border-l-4 border-follower bg-follower-wash';
 };
 
-/** Scrolls the active row to the centre of its zone whenever it changes. */
-function useCentre(active: boolean, deps: unknown[]) {
+/**
+ * Holds the active row at the READING LINE — a fixed height on screen, with the
+ * script moving up underneath it.
+ *
+ * It used to scroll to centre, which is why Jan could see David reading: on a
+ * 32" screen the whole script fits, so his eyes tracked down the page instead
+ * of the page coming to him (B437). `block: 'start'` plus the container's
+ * `scroll-padding-top` puts the beat at the line with two or three said lines
+ * above it. See .tt-lane-scroll in index.css.
+ */
+function useReadingLine(active: boolean, deps: unknown[]) {
   const ref = useRef<HTMLLIElement | null>(null);
   useEffect(() => {
-    if (active && ref.current) ref.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (active && ref.current) ref.current.scrollIntoView({ block: 'start' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   return ref;
@@ -37,12 +46,10 @@ function useCentre(active: boolean, deps: unknown[]) {
 function ZoneShell({
   zone,
   rank,
-  wide,
   children,
 }: {
   zone: RecordingZone;
   rank: Rank;
-  wide?: boolean;
   children: React.ReactNode;
 }): JSX.Element {
   return (
@@ -51,8 +58,7 @@ function ZoneShell({
       data-zone={zone}
       data-rank={rank}
       className={[
-        'tt-lane-scroll h-full border-l border-edge px-6 py-6 first:border-l-0',
-        wide ? 'flex-[2]' : 'flex-1',
+        'tt-lane-scroll h-full w-full px-6 py-6',
         rank === 'driven' ? 'bg-canvas' : 'bg-lane-alt',
       ].join(' ')}
     >
@@ -86,7 +92,7 @@ export function MajorZone({
 }): JSX.Element {
   return (
     <ZoneShell zone="major" rank={rank}>
-      <ol className="space-y-1">
+      <ol className="tt-reading-list space-y-1">
         {transcript.topics.map((major, i) => {
           const active = major.id === current?.id;
           return (
@@ -128,7 +134,7 @@ export function MinorZone({
   const minors = transcript.topics.flatMap((major) => major.minors);
   return (
     <ZoneShell zone="minor" rank={rank}>
-      <ol className="space-y-1">
+      <ol className="tt-reading-list space-y-1">
         {minors.map((minor, i) => (
           <Row
             key={minor.id}
@@ -173,7 +179,7 @@ export function TriggerZone({
   const last = triggers.length - 1;
 
   return (
-    <ZoneShell zone="triggers" rank={rank} wide>
+    <ZoneShell zone="triggers" rank={rank}>
       {triggers.length === 0 ? (
         // Never invent one. Say plainly that nobody has authored them, so the
         // talent knows this is a gap in the data rather than a broken app.
@@ -182,7 +188,7 @@ export function TriggerZone({
           write a set through the control API.
         </p>
       ) : (
-        <ol className="space-y-2">
+        <ol className="tt-reading-list space-y-2">
           {triggers.map((trigger, i) => (
             <Row
               key={i}
@@ -220,23 +226,39 @@ export function TriggerZone({
 
 export function ParagraphZone({
   paragraph,
+  next,
   rank,
 }: {
   paragraph: Paragraph | undefined;
+  next: Paragraph | undefined;
   rank: Rank;
 }): JSX.Element {
   return (
-    <ZoneShell zone="paragraph" rank={rank} wide>
-      <div
-        className={[
-          'rounded-r px-4 py-3 transition-colors duration-150',
-          markerBar(rank, true),
-        ].join(' ')}
-      >
-        {/* One paragraph, not a scrolling wall. The whole script is a separate
-            surface you slide out deliberately. */}
+    <ZoneShell zone="paragraph" rank={rank}>
+      <div className={['rounded-r px-4 py-3', markerBar(rank, true)].join(' ')}>
+        {/* One paragraph, not a scrolling wall. This was the configuration that
+            actually worked on camera — Jan, watching David's eyes: "the eyes is
+            fixed just on the camera" (B437). */}
         <p className="font-body text-script leading-relaxed text-ink">{paragraph?.text ?? '—'}</p>
       </div>
+
+      {/*
+        A PEEK at what is coming, and deliberately only below — "with the
+        paragraph one I only want to see below" (B437).
+
+        Kept faint and clipped on purpose. David asked to know a second
+        paragraph was coming; he did NOT ask for a second paragraph to read, and
+        the two-paragraph take is the one Jan liked least. This is a hint that
+        something follows, not more script.
+      */}
+      {next && (
+        <div className="mt-5 max-h-24 overflow-hidden border-l-2 border-transparent px-4">
+          <p className="font-display text-[0.6rem] uppercase tracking-[0.2em] text-muted">Next</p>
+          <p className="mt-1 font-body text-script leading-relaxed text-muted opacity-45">
+            {next.text}
+          </p>
+        </div>
+      )}
     </ZoneShell>
   );
 }
@@ -285,7 +307,7 @@ export function TranscriptDrawer({
             T to close
           </span>
         </p>
-        <ol className="space-y-3">
+        <ol className="tt-reading-list space-y-3">
           {paragraphs.map((paragraph, i) => (
             <Row
               key={paragraph.id}
@@ -327,7 +349,7 @@ function Row({
   opacity?: string;
   children: React.ReactNode;
 }): JSX.Element {
-  const ref = useCentre(active, [dep]);
+  const ref = useReadingLine(active, [dep]);
   return (
     <li ref={ref}>
       <div

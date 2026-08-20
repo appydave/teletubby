@@ -41,6 +41,7 @@ const reset = (): void => {
     step: 0,
     visible: ['triggers', 'paragraph'],
     driven: 'triggers',
+    weights: { major: 1, minor: 1, triggers: 2, paragraph: 2 },
     camera: 'right',
     transcriptOpen: false,
     transcriptEdge: 'left',
@@ -161,17 +162,20 @@ describe('every boundary crossing announces itself', () => {
     expect(s().scriptId).toBe(LAST_SCRIPT);
   });
 
-  it('announces a corpus change too, and resets the beat', () => {
+  it('resets the beat on a corpus change but stays SILENT about it', () => {
     s().selectScript(SCRIPT_01);
     s().selectTranscript('tom-original');
     s().stepNext();
+    useProm.setState({ cue: null });
     s().selectTranscript('v01-rewrite');
 
-    // A cadence transcript is a different document, not a translation — v02
-    // turns four of Tom's paragraphs into three, so there is no honest
-    // correspondence to carry across.
+    // The beat resets: a cadence transcript is a different document, not a
+    // translation — v02 turns four of Tom's paragraphs into three, so there is
+    // no honest correspondence to carry across.
     expect(s().step).toBe(0);
-    expect(s().cue?.label).toBe('Cadence');
+    // But no cue. Switching corpus is an A/B comparison, and a card over the
+    // top hides the very difference the talent flipped across to see (B437).
+    expect(s().cue).toBeNull();
   });
 });
 
@@ -320,6 +324,41 @@ describe('layout is subordinate to camera position', () => {
   });
 });
 
+describe('resizing the seam between zones', () => {
+  // David asked for this twice in one take, and worked around its absence by
+  // shrinking the whole window (B437).
+  beforeEach(() => {
+    useProm.setState({
+      visible: [...RECORDING_SET],
+      driven: 'triggers',
+      weights: { major: 1, minor: 1, triggers: 2, paragraph: 2 },
+    });
+  });
+
+  it('moves weight from one zone to its neighbour, keeping the total', () => {
+    const before = Object.values(s().weights).reduce((a, b) => a + b, 0);
+    s().resizeZones('triggers', 'paragraph', 120);
+    expect(s().weights.triggers).toBeGreaterThan(2);
+    expect(s().weights.paragraph).toBeLessThan(2);
+    expect(Object.values(s().weights).reduce((a, b) => a + b, 0)).toBeCloseTo(before, 10);
+  });
+
+  it('refuses to squeeze a zone to nothing', () => {
+    // A zone dragged to zero width is one the talent hid by accident mid-take,
+    // and hiding is what the zone toggles are for.
+    for (let i = 0; i < 200; i++) s().resizeZones('triggers', 'paragraph', 100);
+    expect(s().weights.paragraph).toBeGreaterThanOrEqual(0.35);
+    expect(s().weights.triggers).toBeLessThanOrEqual(3.65);
+  });
+
+  it('is reversible', () => {
+    s().resizeZones('major', 'minor', 90);
+    s().resizeZones('major', 'minor', -90);
+    expect(s().weights.major).toBeCloseTo(1, 10);
+    expect(s().weights.minor).toBeCloseTo(1, 10);
+  });
+});
+
 describe('exactly one strong marker', () => {
   it('ranks the driven zone strong and every follower quiet', () => {
     useProm.setState({ visible: [...RECORDING_SET], driven: 'minor' });
@@ -387,6 +426,90 @@ describe('the end card', () => {
   it('names what comes next', () => {
     s().selectScript(SCRIPT_01);
     expect(nextScript(s())?.title).toBe('Why AI pilots become dead ends');
+  });
+});
+
+describe('the driven zone sets the scale of movement', () => {
+  /**
+   * The bug David hit on the first real take: driving Paragraph, `↓` walked the
+   * trigger set, so it took five presses to advance one paragraph (B437).
+   */
+  beforeEach(() => {
+    s().selectScript(SCRIPT_01);
+    s().selectTranscript('tom-original');
+  });
+
+  it('advances one PARAGRAPH per press when driving the paragraph', () => {
+    useProm.setState({ visible: ['paragraph'], driven: 'paragraph', step: 0 });
+    const ids = paragraphsOf(currentTranscript(s())!).map((p) => p.id);
+
+    expect(currentParagraphId(s())).toBe(ids[0]);
+    s().stepNext();
+    expect(currentParagraphId(s())).toBe(ids[1]);
+    s().stepNext();
+    expect(currentParagraphId(s())).toBe(ids[2]);
+  });
+
+  it('still advances one TRIGGER per press when driving the triggers', () => {
+    useProm.setState({ driven: 'triggers', step: 0 });
+    s().stepNext();
+    expect(s().step).toBe(1);
+  });
+
+  it('advances one MAJOR topic per press when driving the major', () => {
+    useProm.setState({ visible: ['major'], driven: 'major', step: 0 });
+    const first = currentMajor(s())?.id;
+    s().stepNext();
+    expect(currentMajor(s())?.id).not.toBe(first);
+  });
+
+  it('lands on the FIRST beat of a unit when stepping back into it', () => {
+    // Stepping back into a paragraph puts the talent at its start, never at
+    // whatever beat they happened to leave from.
+    useProm.setState({ driven: 'paragraph', step: 0 });
+    s().stepNext();
+    const secondParagraph = currentParagraphId(s());
+    const landed = s().step;
+
+    useProm.setState({ driven: 'triggers' });
+    s().stepNext();
+    s().stepNext();
+    expect(currentParagraphId(s())).toBe(secondParagraph);
+
+    useProm.setState({ driven: 'paragraph' });
+    s().stepPrev();
+    s().stepNext();
+    expect(s().step).toBe(landed);
+  });
+
+  it('clamps at the last unit and nudges, whatever the scale', () => {
+    for (const driven of RECORDING_SET) {
+      useProm.setState({ driven, step: 0, nudge: 0 });
+      for (let i = 0; i < 40; i++) s().stepNext();
+      expect(s().scriptId, `${driven} crossed a script boundary`).toBe(SCRIPT_01);
+      expect(s().nudge, `${driven} never nudged`).toBeGreaterThan(0);
+      expect(isLastStep(s()), `${driven} did not reach the end`).toBe(true);
+    }
+  });
+
+  it('never steps before the first beat, whatever the scale', () => {
+    for (const driven of RECORDING_SET) {
+      useProm.setState({ driven, step: 0 });
+      for (let i = 0; i < 5; i++) s().stepPrev();
+      expect(s().step).toBe(0);
+    }
+  });
+
+  it('reaches every paragraph when driving the paragraph', () => {
+    // A coarser scale must not make part of the script unreachable.
+    useProm.setState({ driven: 'paragraph', step: 0 });
+    const ids = paragraphsOf(currentTranscript(s())!).map((p) => p.id);
+    const seen = [currentParagraphId(s())];
+    for (let i = 0; i < 20 && !isLastStep(s()); i++) {
+      s().stepNext();
+      seen.push(currentParagraphId(s()));
+    }
+    expect([...new Set(seen)]).toEqual(ids);
   });
 });
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { ScriptSet, TriggerStyle } from '@shared/domain';
 import { TRIGGER_STYLE_LETTER } from '@shared/domain';
@@ -12,6 +12,7 @@ import {
   currentMinor,
   currentParagraph,
   currentParagraphId,
+  nextParagraph,
   currentScript,
   currentTranscript,
   rankOf,
@@ -28,6 +29,8 @@ import {
   TriggerZone,
 } from './components/Zones';
 import CueOverlay from './components/CueOverlay';
+import Divider from './components/Divider';
+import CadencePanel from './components/CadencePanel';
 
 const PRESET_LABEL: Record<TextPreset, string> = {
   standard: 'Standard',
@@ -114,9 +117,11 @@ function Waiting({ message, failed }: { message: string; failed?: boolean }): JS
 }
 
 function Stage(): JSX.Element {
+  const [cadenceOpen, setCadenceOpen] = useState(false);
   const script = useProm(currentScript);
   const transcript = useProm(currentTranscript);
   const paragraph = useProm(currentParagraph);
+  const upcoming = useProm(nextParagraph);
   const minor = useProm(currentMinor);
   const major = useProm(currentMajor);
   const triggers = useProm(activeTriggers);
@@ -131,6 +136,8 @@ function Stage(): JSX.Element {
   const visible = useProm((s) => s.visible);
   const driven = useProm((s) => s.driven);
   const camera = useProm((s) => s.camera);
+  const weights = useProm(useShallow((st) => st.weights));
+  const resizeZones = useProm((st) => st.resizeZones);
   const transcriptOpen = useProm((s) => s.transcriptOpen);
   const transcriptEdge = useProm((s) => s.transcriptEdge);
   const mirror = useProm((s) => s.mirror);
@@ -220,7 +227,7 @@ function Stage(): JSX.Element {
       case 'triggers':
         return <TriggerZone key={zone} triggers={triggers} step={step} rank={rank} focus={focus} />;
       case 'paragraph':
-        return <ParagraphZone key={zone} paragraph={paragraph} rank={rank} />;
+        return <ParagraphZone key={zone} paragraph={paragraph} next={upcoming} rank={rank} />;
     }
   };
 
@@ -330,6 +337,9 @@ function Stage(): JSX.Element {
             ))}
           </Group>
 
+          <Chip on={cadenceOpen} onClick={() => setCadenceOpen((open) => !open)}>
+            Cadence
+          </Chip>
           <Chip on={transcriptOpen} onClick={toggleTranscript}>
             Transcript <span className="font-mono text-[0.65rem] opacity-60">T</span>
           </Chip>
@@ -349,7 +359,14 @@ function Stage(): JSX.Element {
       {/* ---------------- stage: mirrorable ---------------- */}
       <main className="relative flex-1 overflow-hidden">
         <div className={['flex h-full', mirror ? 'tt-mirror' : ''].join(' ')}>
-          {order.map(zoneNode)}
+          {order.map((zone, i) => (
+            <Fragment key={zone}>
+              {i > 0 && <Divider onResize={(dx) => resizeZones(order[i - 1], zone, dx)} />}
+              <div className="h-full min-w-0" style={{ flex: weights[zone] }}>
+                {zoneNode(zone)}
+              </div>
+            </Fragment>
+          ))}
         </div>
         <TranscriptDrawer
           transcript={transcript}
@@ -358,6 +375,33 @@ function Stage(): JSX.Element {
           open={transcriptOpen}
           onClose={toggleTranscript}
         />
+        {cadenceOpen && transcript.talentId && (
+          <CadencePanel
+            scriptId={script.id}
+            transcriptId={transcript.id}
+            corpus={transcript.corpus}
+            talentId={transcript.talentId}
+            onClose={() => setCadenceOpen(false)}
+          />
+        )}
+        {cadenceOpen && !transcript.talentId && (
+          <div
+            className="absolute inset-0 z-30 flex items-start justify-center bg-veil pt-16"
+            onClick={() => setCadenceOpen(false)}
+            role="presentation"
+          >
+            <div className="w-[38rem] rounded-lg border border-edge-strong bg-panel px-7 py-6">
+              {/* A provenance transcript belongs to no talent — meaning is not
+                  voiced — so there is no envelope to judge it against. Say that
+                  rather than silently scoring it against somebody's numbers. */}
+              <p className="font-body text-sm text-ink">
+                This is the <span className="font-semibold">provenance</span> transcript. It belongs
+                to no talent, so there is no cadence envelope to measure it against — switch to a
+                cadence transcript to see the numbers.
+              </p>
+            </div>
+          </div>
+        )}
         <CueOverlay />
       </main>
 

@@ -95,6 +95,12 @@ interface PrompterState {
 
   visible: RecordingZone[];
   driven: RecordingZone;
+  /**
+   * Flex weight per zone, adjusted by dragging a divider. Relative, not pixels,
+   * so the arrangement survives the window being resized or moved to the other
+   * side of the lens.
+   */
+  weights: Record<RecordingZone, number>;
   camera: CameraSide;
   /** The full-transcript skim surface. Overlays; never displaces (see below). */
   transcriptOpen: boolean;
@@ -118,6 +124,7 @@ interface PrompterState {
   toggleZone: (zone: RecordingZone) => void;
   setDriven: (zone: RecordingZone) => void;
   setCamera: (side: CameraSide) => void;
+  resizeZones: (left: RecordingZone, right: RecordingZone, deltaPx: number) => void;
   toggleTranscript: () => void;
   toggleMirror: () => void;
   toggleFocus: () => void;
@@ -171,6 +178,7 @@ export const useProm = create<PrompterState>((set, get) => ({
   // the paragraph they belong to. The talent changes it and it stays changed.
   visible: ['triggers', 'paragraph'],
   driven: 'triggers',
+  weights: { major: 1, minor: 1, triggers: 2, paragraph: 2 },
   camera: 'right',
   transcriptOpen: false,
   transcriptEdge: 'left',
@@ -252,27 +260,39 @@ export const useProm = create<PrompterState>((set, get) => ({
   },
 
   /**
-   * Stepping is clamped INSIDE the trigger set, always. Pressing past the last
-   * beat nudges the end card — it can never silently roll into the next script.
+   * ONE KEY MEANS ONE SCALE OF MOVEMENT — and **the driven zone sets the
+   * scale.**
    *
-   * This is the single most important rule in the app. In the original prompter
-   * `↓` past the last beat advanced to the next script, and David hit it live:
-   * "there was no clear distinction that I was moving out of transcript 1 into
-   * transcript 2. I got really confused." One key means one scale of movement.
-   * See docs/prior-art-kybernesis-prompter.md §3.
+   * Driving Paragraph, `↓` moves to the next paragraph. Driving Major, to the
+   * next major topic. Driving Triggers, to the next trigger. It always lands on
+   * the FIRST beat of the next unit, so stepping back into a paragraph puts you
+   * at its start rather than its end.
+   *
+   * This is a bug David hit on the first real take (Captain's Log B437): he was
+   * driving Paragraph and `↓` walked the trigger set, so it took five presses
+   * to advance one paragraph. "The up and down arrow should work on whatever
+   * the driver is." It also turned out to be the cleanest reading of the
+   * prior-art rule rather than an exception to it.
+   *
+   * Stepping stays clamped INSIDE the script. Pressing past the last unit
+   * nudges the end card; it can never silently roll into the next script. In
+   * the original prompter it did, and David got lost mid-take —
+   * docs/prior-art-kybernesis-prompter.md §3.
    */
   stepNext: () => {
     const state = get();
-    const triggers = activeTriggers(state);
-    if (triggers.length === 0) return;
-    if (state.step >= triggers.length - 1) {
-      set({ nudge: state.nudge + 1 });
+    const target = adjacentUnitStep(state, 1);
+    if (target === null) {
+      if (activeTriggers(state).length > 0) set({ nudge: state.nudge + 1 });
       return;
     }
-    set({ step: state.step + 1 });
+    set({ step: target });
   },
 
-  stepPrev: () => set((s) => ({ step: Math.max(0, s.step - 1) })),
+  stepPrev: () => {
+    const target = adjacentUnitStep(get(), -1);
+    if (target !== null) set({ step: target });
+  },
 
   /**
    * Every script change announces itself with a cue card — whatever triggered
@@ -304,14 +324,19 @@ export const useProm = create<PrompterState>((set, get) => ({
   },
 
   /**
-   * Switching corpus — provenance ↔ cadence — RESETS the beat, and announces
-   * itself.
+   * Switching corpus — provenance ↔ cadence — RESETS the beat, and says nothing.
    *
-   * It is tempting to carry the position across. Do not: a cadence transcript
-   * is a different document, not a translation. v02 re-cadences four of Tom's
-   * paragraphs into three, so no honest correspondence exists, and a wrong sync
-   * is worse than none (prior-art §5). Same rule as a script change, for the
-   * same reason.
+   * It carried a cue card until David used it: "the overlay kicking in just
+   * means I can't see a visual change in the text, so that's a feature you've
+   * added that doesn't help" (B437). He is right, and the rule was
+   * over-applied. A cue announces a boundary the talent CROSSED; switching
+   * corpus is an A/B comparison of the same content, and the card hides the
+   * exact difference you flipped over to see. Style switching never had one and
+   * he liked it: "very quick, nothing coming through."
+   *
+   * The beat still resets. A cadence transcript is a different document, not a
+   * translation — v02 re-cadences four of Tom's paragraphs into three, so no
+   * honest correspondence exists, and a wrong sync is worse than none.
    */
   selectTranscript: (transcriptId) => {
     const state = get();
@@ -323,11 +348,6 @@ export const useProm = create<PrompterState>((set, get) => ({
       transcriptId: transcript.id,
       style: defaultStyle(transcript),
       step: 0,
-      cue: {
-        label: transcript.kind === 'cadence' ? 'Cadence' : 'Provenance',
-        title: transcript.corpus,
-        token: (state.cue?.token ?? 0) + 1,
-      },
     });
   },
 
@@ -392,6 +412,24 @@ export const useProm = create<PrompterState>((set, get) => ({
       transcriptEdge: side === 'left' ? 'right' : 'left',
     }),
 
+  /**
+   * Move the seam between two adjacent zones. Weight moves from one to the
+   * other so the total stays constant — the stage never grows or shrinks, only
+   * the split between them.
+   *
+   * Clamped so neither side can be squeezed to nothing: a zone dragged to zero
+   * width is a zone the talent has hidden by accident mid-take, and hiding is
+   * what the zone toggles are for.
+   */
+  resizeZones: (left, right, deltaPx) => {
+    const state = get();
+    const step = deltaPx / 600;
+    const a = state.weights[left] + step;
+    const b = state.weights[right] - step;
+    if (a < 0.35 || b < 0.35) return;
+    set({ weights: { ...state.weights, [left]: a, [right]: b } });
+  },
+
   toggleTranscript: () => set((s) => ({ transcriptOpen: !s.transcriptOpen })),
   toggleMirror: () => set((s) => ({ mirror: !s.mirror })),
   toggleFocus: () => set((s) => ({ focus: !s.focus })),
@@ -439,6 +477,19 @@ export const currentParagraph = (s: PrompterState): Paragraph | undefined => {
   return paragraphsOf(transcript).find((p) => p.id === id);
 };
 
+/**
+ * The paragraph after the current one, for the peek beneath it. Undefined on
+ * the last paragraph, so the zone shows nothing rather than an empty card.
+ */
+export const nextParagraph = (s: PrompterState): Paragraph | undefined => {
+  const transcript = currentTranscript(s);
+  const id = currentParagraphId(s);
+  if (!transcript || !id) return undefined;
+  const all = paragraphsOf(transcript);
+  const index = all.findIndex((p) => p.id === id);
+  return index < 0 ? undefined : all[index + 1];
+};
+
 /** The minor topic owning the current paragraph — derived, never tracked. */
 export const currentMinor = (s: PrompterState): MinorTopic | undefined => {
   const transcript = currentTranscript(s);
@@ -459,9 +510,71 @@ export const currentMajor = (s: PrompterState): MajorTopic | undefined => {
   );
 };
 
+/**
+ * Paragraph id → the minor and major topic that own it. Built once per lookup
+ * rather than tracked, so it cannot fall out of step with the transcript.
+ */
+const ownership = (transcript: Transcript): Map<string, { minor: string; major: string }> => {
+  const map = new Map<string, { minor: string; major: string }>();
+  for (const major of transcript.topics)
+    for (const minor of major.minors)
+      for (const paragraph of minor.paragraphs)
+        map.set(paragraph.id, { minor: minor.id, major: major.id });
+  return map;
+};
+
+/**
+ * What counts as "the same place" at the scale the talent is driving.
+ *
+ * Driving Triggers, every beat is its own unit — so the index IS the key.
+ * Driving anything coarser, several beats share a key and `↓` skips past all
+ * of them at once.
+ */
+export const unitKeyAt = (s: PrompterState, index: number): string | null => {
+  const triggers = activeTriggers(s);
+  const trigger = triggers[index];
+  if (!trigger) return null;
+  if (s.driven === 'triggers') return `t:${index}`;
+
+  const transcript = currentTranscript(s);
+  if (!transcript) return null;
+  const owner = ownership(transcript).get(trigger.paragraphId);
+  if (s.driven === 'paragraph') return `p:${trigger.paragraphId}`;
+  if (s.driven === 'minor') return owner ? `n:${owner.minor}` : `p:${trigger.paragraphId}`;
+  return owner ? `m:${owner.major}` : `p:${trigger.paragraphId}`;
+};
+
+/**
+ * The first beat of the next (or previous) unit, or null if there is none.
+ * Returning the FIRST beat matters going backwards: stepping back into a
+ * paragraph should put the talent at its start, not wherever they left it.
+ */
+const adjacentUnitStep = (s: PrompterState, direction: 1 | -1): number | null => {
+  const triggers = activeTriggers(s);
+  if (triggers.length === 0) return null;
+
+  const here = unitKeyAt(s, s.step);
+  for (let i = s.step + direction; i >= 0 && i < triggers.length; i += direction) {
+    if (unitKeyAt(s, i) === here) continue;
+    if (direction === 1) return i;
+    // Walk back to where this unit began.
+    const key = unitKeyAt(s, i);
+    let first = i;
+    while (first > 0 && unitKeyAt(s, first - 1) === key) first -= 1;
+    return first;
+  }
+  return null;
+};
+
+/**
+ * The end card goes live when there is nowhere further to step AT THE CURRENT
+ * SCALE — being on the last paragraph is the end of the script even if the
+ * trigger set has beats left inside it.
+ */
 export const isLastStep = (s: PrompterState): boolean => {
   const triggers = activeTriggers(s);
-  return triggers.length === 0 || s.step >= triggers.length - 1;
+  if (triggers.length === 0) return true;
+  return adjacentUnitStep(s, 1) === null;
 };
 
 export const nextScript = (s: PrompterState): Script | undefined => {

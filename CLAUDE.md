@@ -122,7 +122,7 @@ The app must be running — the surface lives in its process. Port and token com
 ```bash
 npm install        # npm ONLY — packageManager is pinned; pnpm blocks Electron's postinstall
 npm run dev        # Electron app; renderer on 7110, control API on 7111 (registered slots)
-npm test           # 167 tests
+npm test           # 177 tests
 npm run typecheck
 ```
 
@@ -132,11 +132,17 @@ These come from `docs/prior-art-kybernesis-prompter.md` — a working two-column
 David drove live the day before this repo existed. They are **requirements, not
 preferences**; each one is a bug that already happened once.
 
-1. **Stepping is clamped inside its unit. One key means one scale of movement.**
-   `↑ ↓ Space` step triggers and can *never* cross into the next script. In the original,
-   down-arrow past the last beat silently advanced the script and David got lost mid-take.
+1. **Stepping is clamped inside its unit. One key means one scale of movement — and the
+   DRIVEN ZONE sets the scale.** `↑ ↓ Space` move by one paragraph when driving Paragraph, one
+   major topic when driving Major, one trigger when driving Triggers, and can *never* cross
+   into the next script. In the original prompter, down-arrow past the last beat silently
+   advanced the script and David got lost mid-take. On the first real take (B437) the arrows
+   ignored the driven zone entirely — five presses to advance one paragraph.
 2. **Every boundary crossing announces itself** — an end card at the edge that turns yellow
    and names what's next, and a cue card on *every* script change whatever triggered it.
+   ⚠️ **A corpus switch is NOT a boundary crossing** and must stay silent: it is an A/B
+   comparison, and a card over the top hides the very difference you flipped across to see
+   (B437). Style switching has never had one, and that is why it feels right.
 3. **The trigger→paragraph map is authored data, never derived positionally.** It ships
    beside the triggers in `scripts/build-scripts-data.mjs` and is validated at build time.
    Proportional mapping was considered and rejected — a wrong sync is worse than none.
@@ -144,6 +150,11 @@ preferences**; each one is a bug that already happened once.
    equally-loud markers read as two competing claims about where you are.
 5. **Mirror mode is v1**, not deferred — it's one `scaleX(-1)` and prompter glass needs it.
 6. **Text size is three named presets**, never a ±stepper. One decision before the take.
+7. **The beat you are on holds a fixed height; the script moves up underneath it.** Jan,
+   watching David's eyes on the first take: the old centre-scrolling let him read *down* a 32"
+   screen instead of the page coming to him. `--tt-reading-line` + `scroll-padding-top` +
+   the `.tt-reading-list` spacers are what hold the line — the spacers are load-bearing, since
+   without them the first and last beats cannot reach it.
 
 ## Styling — AppyDave, light only
 

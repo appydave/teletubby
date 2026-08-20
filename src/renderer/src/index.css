@@ -68,6 +68,9 @@
 
   /* --- Type scale, driven by the three named presets below. */
   --tt-scale: 1;
+  /* How far down the stage the active beat sits. High enough to leave two or
+     three said lines above it, low enough that most of the script is ahead. */
+  --tt-reading-line: 26vh;
   --tt-bullet-size: calc(1.375rem * var(--tt-scale));
   --tt-script-size: calc(1.0625rem * var(--tt-scale));
   --tt-topic-size: calc(0.875rem * var(--tt-scale));
@@ -131,10 +134,37 @@ body {
   transform: scaleX(-1);
 }
 
+/*
+ * THE READING LINE — the fix Jan diagnosed by watching David's eyes.
+ *
+ * The beat you are on holds a FIXED height on screen and the script moves up
+ * underneath it. Before this the active row scrolled to centre, and on a 32"
+ * screen the whole script fit at once — so David never stepped, he just read
+ * downward, and Jan could see it: "they can see that you're reading something."
+ * His fix, in his words: "the script moves up when you're talking so your eyes
+ * still get locked into the camera."
+ *
+ * `scroll-padding-top` is what does it: `scrollIntoView({ block: 'start' })`
+ * respects it, so the active row lands at the line rather than at the top edge,
+ * leaving two or three already-said lines visible above.
+ */
 .tt-lane-scroll {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--tt-border) transparent;
+  scroll-padding-top: var(--tt-reading-line);
+  scroll-behavior: smooth;
+}
+
+/*
+ * Spacers, and they are not decoration: without them the FIRST and LAST beats
+ * cannot reach the reading line, because there is nothing to scroll past. A
+ * teleprompter has to be able to hold any line at the same height, including
+ * the first one.
+ */
+.tt-reading-list {
+  padding-top: var(--tt-reading-line);
+  padding-bottom: 78vh;
 }
 .tt-lane-scroll::-webkit-scrollbar {
   width: 10px;
