@@ -136,6 +136,15 @@ interface PrompterState {
    */
   rigs: Rig[];
   rigId: string | null;
+  /**
+   * Whether the stored workspace has actually been read.
+   *
+   * Load-bearing: the app writes the live layout back on every change, so if a
+   * failed `list_rigs` let it start writing anyway, one transient error would
+   * overwrite the talent's saved arrangement with the built-in default. Nothing
+   * is remembered until something has been recalled.
+   */
+  rigsLoaded: boolean;
 
   cue: CueCard | null;
   /** Increments each time a step was refused at the boundary, to replay the nudge. */
@@ -215,6 +224,7 @@ export const useProm = create<PrompterState>((set, get) => ({
 
   rigs: [],
   rigId: null,
+  rigsLoaded: false,
 
   cue: null,
   nudge: 0,
@@ -473,12 +483,13 @@ export const useProm = create<PrompterState>((set, get) => ({
   loadRigs: (rigs, workspace) => {
     const layout = workspace.layout;
     if (!layout || validateRigLayout(layout).length > 0) {
-      set({ rigs, rigId: workspace.rigId });
+      set({ rigs, rigId: workspace.rigId, rigsLoaded: true });
       return;
     }
     set({
       rigs,
       rigId: workspace.rigId,
+      rigsLoaded: true,
       ...cloneLayout(layout),
       visible: canonicalZones(layout.visible),
       transcriptEdge: edgeFor(layout.camera),

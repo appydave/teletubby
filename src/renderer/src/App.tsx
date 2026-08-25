@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { ScriptSet, TriggerStyle } from '@shared/domain';
 import { TRIGGER_STYLE_LETTER } from '@shared/domain';
+import type { Rig, Workspace } from '@shared/rig';
 import {
   CAMERA_SIDES,
   RECORDING_SET,
@@ -15,6 +16,7 @@ import {
   nextParagraph,
   currentScript,
   currentTranscript,
+  layoutOf,
   rankOf,
   useProm,
   zoneOrder,
@@ -38,10 +40,21 @@ const PRESET_LABEL: Record<TextPreset, string> = {
   stage: 'Stage',
 };
 
+/**
+ * How long the arrangement has to hold still before it is written down.
+ *
+ * Dragging a divider changes the layout on every animation frame; the store is
+ * one atomic JSON document, and there is no reason to rewrite it sixty times a
+ * second to record a gesture that has not finished.
+ */
+const REMEMBER_DELAY_MS = 400;
+
 export default function App(): JSX.Element {
   const set = useProm((s) => s.set);
   const load = useProm((s) => s.load);
   const refresh = useProm((s) => s.refresh);
+  const loadRigs = useProm((s) => s.loadRigs);
+  const setRigs = useProm((s) => s.setRigs);
   const [failure, setFailure] = useState<string | null>(null);
 
   /**
@@ -83,12 +96,32 @@ export default function App(): JSX.Element {
       apply(full.data);
     };
 
-    void fetchSet(load);
+    const fetchRigs = async (
+      apply: (data: { rigs: Rig[]; workspace: Workspace }) => void,
+    ): Promise<void> => {
+      const result = await window.appytron.invoke<{ rigs: Rig[]; workspace: Workspace }>({
+        capability: 'list_rigs',
+      });
+      if (cancelled || !result.ok) return;
+      apply(result.data);
+    };
+
+    // Rigs FIRST, and awaited. The stage does not mount until the set arrives,
+    // so getting the arrangement in before that is what stops the talent
+    // watching their layout snap from the built-in default into their own.
+    void (async () => {
+      await fetchRigs(({ rigs, workspace }) => loadRigs(rigs, workspace));
+      await fetchSet(load);
+    })();
 
     // An agent writing through the control API lands here. `refresh` swaps the
     // data without moving the talent — the alternative is that someone editing
     // a trigger word yanks the person on camera back to the top of script 01.
+    //
+    // Rigs take the same treatment: a rig an agent authored appears as a new
+    // chip, and the arrangement on screen is left exactly where it is.
     const unsubscribe = window.appytron.onControlChanged(() => {
+      void fetchRigs(({ rigs }) => setRigs(rigs));
       void fetchSet(refresh);
     });
 
@@ -96,7 +129,7 @@ export default function App(): JSX.Element {
       cancelled = true;
       unsubscribe();
     };
-  }, [load, refresh]);
+  }, [load, refresh, loadRigs, setRigs]);
 
   if (failure) return <Waiting message={failure} failed />;
   if (!set) return <Waiting message="Loading the set…" />;
@@ -143,6 +176,8 @@ function Stage(): JSX.Element {
   const mirror = useProm((s) => s.mirror);
   const focus = useProm((s) => s.focus);
   const text = useProm((s) => s.text);
+  const rigId = useProm((s) => s.rigId);
+  const rigsLoaded = useProm((s) => s.rigsLoaded);
 
   const selectScript = useProm((s) => s.selectScript);
   const selectTranscript = useProm((s) => s.selectTranscript);
@@ -162,6 +197,34 @@ function Stage(): JSX.Element {
   useEffect(() => {
     document.documentElement.dataset.text = text;
   }, [text]);
+
+  /**
+   * REMEMBER HOW THIS ENDED — the whole reason rigs exist.
+   *
+   * Every launch used to reset the arrangement, so four controls got re-set
+   * before every take. Now the layout is written down whenever it settles, and
+   * the next launch opens on it.
+   *
+   * ⚠️ Gated on `rigsLoaded`. The app writes the live layout back on every
+   * change, so if a failed `list_rigs` let it start writing anyway, one
+   * transient error would overwrite the talent's saved arrangement with the
+   * built-in default. Nothing is remembered until something has been recalled.
+   *
+   * `layoutOf` is read from `getState()` and never as a selector — it builds a
+   * fresh object every call, which as a selector is the infinite re-render that
+   * blanks the window.
+   */
+  useEffect(() => {
+    if (!rigsLoaded) return undefined;
+    const timer = setTimeout(() => {
+      const state = useProm.getState();
+      void window.appytron.invoke({
+        capability: 'remember_layout',
+        input: { layout: layoutOf(state), rigId: state.rigId },
+      });
+    }, REMEMBER_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [rigsLoaded, visible, driven, weights, camera, text, mirror, focus, rigId]);
 
   /**
    * One key means one scale of movement:
