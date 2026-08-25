@@ -34,7 +34,17 @@ import {
   type Transcript,
   type TriggerSet,
 } from '@shared/domain';
-import { scriptSetSchema, talentSchema } from '@shared/domain-schema';
+import { rigSchema, scriptSetSchema, talentSchema } from '@shared/domain-schema';
+import {
+  CAMERA_SIDES,
+  RECORDING_SET,
+  TEXT_PRESETS,
+  canonicalZones,
+  validateRig,
+  validateRigLayout,
+  type Rig,
+  type RigLayout,
+} from '@shared/rig';
 import { CAPABILITIES, type CapabilityMeta, type Principal } from '@shared/capabilities';
 import type { ActiveContextHolder } from './active-context.js';
 import { scoreAgainst } from './cadence.js';
@@ -244,6 +254,32 @@ const majorInput = z.object({
   heading: z.string().min(1),
   minors: z.array(minorInput).min(1),
 });
+/**
+ * A layout as a caller supplies it. `visible` is canonicalised on the way in
+ * rather than rejected out of order — the order a human toggled zones in is not
+ * information, and refusing it would make a hand-written rig fiddly for no gain.
+ */
+const layoutInput = z.object({
+  visible: z.array(z.enum(RECORDING_SET)).min(1),
+  driven: z.enum(RECORDING_SET),
+  weights: z.object({
+    major: z.number().finite(),
+    minor: z.number().finite(),
+    triggers: z.number().finite(),
+    paragraph: z.number().finite(),
+  }),
+  camera: z.enum(CAMERA_SIDES),
+  text: z.enum(TEXT_PRESETS),
+  mirror: z.boolean(),
+  focus: z.boolean(),
+});
+
+const normalizeLayout = (layout: RigLayout): RigLayout => ({
+  ...layout,
+  visible: canonicalZones(layout.visible),
+  weights: { ...layout.weights },
+});
+
 const triggerInput = z.object({
   id: z.string().optional(),
   text: z.string().min(1),
@@ -727,6 +763,108 @@ export function createHandlers(): Record<string, Handler> {
     });
   };
 
+  /* --- rigs: the arrangement in front of the talent ----------------- */
+
+  /**
+   * Rigs and the workspace come back together because the UI needs both in the
+   * same breath — which arrangements exist, and which one to open on. Two
+   * queries would mean a window that can render the chips before it knows
+   * which is lit.
+   */
+  handlers.list_rigs = async (_input, context) => {
+    const document = await context.repository.read();
+    return { rigs: document.rigs, workspace: document.workspace };
+  };
+
+  handlers.save_rig = async (input, context) => {
+    const parsed = parse(
+      z.object({
+        id: slug,
+        label: z.string().min(1),
+        layout: layoutInput,
+        ...commandEnvelope,
+      }),
+      input,
+    );
+
+    const rig: Rig = {
+      id: parsed.id,
+      label: parsed.label,
+      layout: normalizeLayout(parsed.layout),
+    };
+    assertShape(rigSchema, rig, 'rig');
+    // The shape gate says the fields are the right types; this says the
+    // arrangement is one the app would let a human build. A rig that drives a
+    // hidden zone passes the first and must never pass the second.
+    assertDomain(validateRig(rig));
+
+    return context.repository.update<unknown>((document) => {
+      const index = document.rigs.findIndex((candidate) => candidate.id === rig.id);
+      const previous = index >= 0 ? document.rigs[index] : null;
+      context.recordPrior(previous);
+
+      if (context.dryRun)
+        return { document, result: { applied: false, preview: { previous, next: rig } } };
+
+      if (index >= 0) document.rigs[index] = rig;
+      else document.rigs.push(rig);
+      return { document, result: { applied: true, previous, rig } };
+    });
+  };
+
+  handlers.rename_rig = async (input, context) => {
+    const parsed = parse(
+      z.object({ id: slug, label: z.string().min(1), ...commandEnvelope }),
+      input,
+    );
+
+    return context.repository.update<unknown>((document) => {
+      const rig = document.rigs.find((candidate) => candidate.id === parsed.id);
+      if (!rig)
+        fail('not_found', `no rig "${parsed.id}"`, {
+          available: document.rigs.map((r) => r.id),
+        });
+
+      const previous = rig.label;
+      context.recordPrior(previous);
+      // Renaming touches the label and NOTHING else — the id is the stable
+      // handle the workspace points at, so a rename can never orphan it.
+      const next: Rig = { ...rig, label: parsed.label };
+      assertShape(rigSchema, next, 'rig');
+
+      if (context.dryRun)
+        return { document, result: { applied: false, preview: { previous, label: parsed.label } } };
+
+      rig.label = parsed.label;
+      return { document, result: { applied: true, previous, rig } };
+    });
+  };
+
+  /**
+   * The sticky layout: what the talent had on screen when they last touched it.
+   *
+   * UI-only, like `set_active_context`. It is not a fact about the data, it is
+   * the human's own working state — and an agent writing it would decide what
+   * appears in front of a person at the moment a take starts, which is exactly
+   * when nobody is looking at the screen to catch it.
+   */
+  handlers.remember_layout = async (input, context) => {
+    const parsed = parse(z.object({ layout: layoutInput, rigId: slug.nullish() }), input);
+
+    const layout = normalizeLayout(parsed.layout);
+    assertDomain(validateRigLayout(layout));
+
+    return context.repository.update<unknown>((document) => {
+      // A pointer to a rig that has since been deleted is dropped rather than
+      // stored: the layout is still the talent's, the attribution is not.
+      const rigId =
+        parsed.rigId && document.rigs.some((rig) => rig.id === parsed.rigId) ? parsed.rigId : null;
+      context.recordPrior(document.workspace);
+      document.workspace = { layout, rigId };
+      return { document, result: { applied: true, workspace: document.workspace } };
+    });
+  };
+
   /* --- removal: preview → confirm → execute ------------------------ */
 
   handlers.delete_trigger_set = async (input, context) => {
@@ -815,6 +953,38 @@ export function createHandlers(): Record<string, Handler> {
     const { pendingId } = parse(z.object({ pendingId: z.string().min(1) }), input);
     const approved = context.confirmations.approve(pendingId);
     return { approved: true, pending: approved };
+  };
+
+  handlers.delete_rig = async (input, context) => {
+    const parsed = parse(z.object({ id: slug, ...commandEnvelope }), input);
+    const document = await context.repository.read();
+    const rig = document.rigs.find((candidate) => candidate.id === parsed.id);
+    if (!rig)
+      fail('not_found', `no rig "${parsed.id}"`, {
+        available: document.rigs.map((r) => r.id),
+      });
+
+    // Consequences, not intent: the name being lost and the arrangement it
+    // stood for, so the human approving it recognises what they are dropping.
+    const preview = {
+      wouldRemove: rig.label,
+      rigId: rig.id,
+      layout: rig.layout,
+      inUse: document.workspace.rigId === rig.id,
+    };
+
+    return guardedDelete(context, input, preview, async () =>
+      context.repository.update((live) => {
+        const removed = live.rigs.find((candidate) => candidate.id === parsed.id) ?? null;
+        context.recordPrior(removed);
+        live.rigs = live.rigs.filter((candidate) => candidate.id !== parsed.id);
+        // Deleting a rig must NOT rearrange a screen someone is talking to. The
+        // layout stays exactly as it is; only the attribution to a rig that no
+        // longer exists is dropped.
+        if (live.workspace.rigId === parsed.id) live.workspace = { ...live.workspace, rigId: null };
+        return { document: live, result: { applied: true, removed } };
+      }),
+    );
   };
 
   return handlers;

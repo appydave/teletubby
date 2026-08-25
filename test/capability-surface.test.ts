@@ -28,6 +28,7 @@ const UI_SURFACE = [
   'approve_pending',
   'create_script',
   'create_set',
+  'delete_rig',
   'delete_script',
   'delete_trigger_set',
   'describe_capabilities',
@@ -38,8 +39,12 @@ const UI_SURFACE = [
   'get_transcript',
   'get_trigger_set',
   'list_pending',
+  'list_rigs',
   'list_sets',
   'list_talents',
+  'remember_layout',
+  'rename_rig',
+  'save_rig',
   'score_transcript',
   'set_active_context',
   'update_script',
@@ -49,13 +54,14 @@ const UI_SURFACE = [
 ];
 
 /**
- * The agent surface is the UI surface MINUS the three verbs an agent must not
+ * The agent surface is the UI surface MINUS the four verbs an agent must not
  * hold. Written as an explicit list rather than a computed difference, because
  * a computed list would silently absorb the next mistake.
  */
 const AGENT_SURFACE = [
   'create_script',
   'create_set',
+  'delete_rig',
   'delete_script',
   'delete_trigger_set',
   'describe_capabilities',
@@ -65,8 +71,11 @@ const AGENT_SURFACE = [
   'get_talent',
   'get_transcript',
   'get_trigger_set',
+  'list_rigs',
   'list_sets',
   'list_talents',
+  'rename_rig',
+  'save_rig',
   'score_transcript',
   'update_script',
   'upsert_talent',
@@ -75,7 +84,7 @@ const AGENT_SURFACE = [
 ];
 
 /**
- * The three that are UI-only, and why. Enumerated BY NAME, because an allow-list
+ * The four that are UI-only, and why. Enumerated BY NAME, because an allow-list
  * built as "everything not explicitly denied" silently includes every one of
  * them the day someone adds a verb.
  */
@@ -85,7 +94,16 @@ const NEVER_ON_THE_AGENT_SURFACE: Record<string, string> = {
   list_pending: 'the approval queue is the human’s view of what an agent has asked for',
   set_active_context:
     'the selection belongs to the human; an agent that could set it could aim every verb that defaults to it',
+  remember_layout:
+    'the sticky layout is the human’s working state; an agent writing it would decide what the talent sees at the START of tomorrow’s take',
 };
+
+/**
+ * ⚠️ **`save_rig` IS on the agent surface, and `remember_layout` is not.** That
+ * split is the whole design, not an oversight: an agent may AUTHOR an
+ * arrangement the talent can then choose, and may never choose one for them.
+ * Authoring adds a chip; remembering changes what opens.
+ */
 
 describe('the published capability surface', () => {
   it('is exactly this, for the ui principal', () => {

@@ -212,6 +212,37 @@ export const CAPABILITIES: readonly CapabilityMeta[] = [
   /* --- removal ----------------------------------------------------- */
   destructive('delete_trigger_set', 'Remove one trigger style from a transcript.'),
   destructive('delete_script', 'Remove a script and every transcript on it.'),
+  destructive('delete_rig', 'Remove a saved rig. The arrangement on screen is not disturbed.'),
+
+  /* --- rigs: the arrangement in front of the talent ----------------- */
+  query(
+    'list_rigs',
+    'Every saved rig, plus the workspace — the layout the talent last had on screen and the rig it came from.',
+    { failureModes: [] },
+  ),
+  command(
+    'save_rig',
+    'Create or replace a named rig: which zones are on screen, which one is driven, the camera edge, the text preset. Layout only — never which script or corpus. Returns the previous rig.',
+    { failureModes: [...WRITE_FAILURES] },
+  ),
+  command(
+    'rename_rig',
+    'Change a rig’s name without touching its layout. Returns the previous name.',
+  ),
+  command(
+    'remember_layout',
+    'Record the arrangement the talent has on screen, so the next launch opens the way they left it. UI ONLY — an agent that could set it would decide what the talent sees tomorrow.',
+    {
+      // Same reasoning as `set_active_context`, and for the same reason: this is
+      // the human's own working state, not a fact about the data. An agent
+      // writing it changes what appears in front of a person at the START of a
+      // take, which is precisely when nobody is watching the screen.
+      principals: ['ui'],
+      idempotent: true,
+      supportsDryRun: false,
+      supportsIdempotencyKey: false,
+    },
+  ),
 
   /* --- the confirmation channel ------------------------------------ */
   command(

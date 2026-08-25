@@ -1,5 +1,5 @@
 /**
- * THE REPOSITORY — where script sets and talents actually live.
+ * THE REPOSITORY — where script sets, talents and rigs actually live.
  *
  * The proof of concept compiled the scripts into the renderer bundle, which was
  * right while nothing could change them. `create`, `edit`, `write` and `update`
@@ -19,19 +19,49 @@
 
 import { createStore, type Store } from '@appydave/core';
 import type { ScriptSet, SetId, Talent, TalentId } from '@shared/domain';
+import { EMPTY_WORKSPACE, type Rig, type Workspace } from '@shared/rig';
 
 export interface RepositoryDocument {
   /** Bumped when the on-disk shape changes; read before trusting the contents. */
-  version: 1;
+  version: 2;
   sets: ScriptSet[];
   talents: Talent[];
+  /** Named arrangements — see `src/shared/rig.ts`. */
+  rigs: Rig[];
+  /** The layout the talent last had on screen, restored on the next launch. */
+  workspace: Workspace;
 }
 
 export const EMPTY_DOCUMENT: RepositoryDocument = {
-  version: 1,
+  version: 2,
   sets: [],
   talents: [],
+  rigs: [],
+  workspace: EMPTY_WORKSPACE,
 };
+
+/**
+ * Bring a document read from disk up to the current shape.
+ *
+ * v1 files have no `rigs` and no `workspace`, and there are real ones on real
+ * machines — the store is the talent's working copy and predates this feature.
+ * Filling the gaps on READ rather than in a migration step means there is no
+ * moment where an old file is unreadable, and no upgrade that can half-run.
+ *
+ * It only ever ADDS. A document that already has rigs comes back untouched,
+ * for the same reason seeding never overwrites.
+ */
+export function normalizeDocument(
+  raw: Partial<RepositoryDocument> | undefined,
+): RepositoryDocument {
+  return {
+    version: 2,
+    sets: raw?.sets ?? [],
+    talents: raw?.talents ?? [],
+    rigs: raw?.rigs ?? [],
+    workspace: raw?.workspace ?? { ...EMPTY_WORKSPACE },
+  };
+}
 
 export interface Repository {
   read(): Promise<RepositoryDocument>;
@@ -52,8 +82,8 @@ export class MemoryRepository implements Repository {
   /** Serialises updates the same way the file store does. */
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(seed: RepositoryDocument = EMPTY_DOCUMENT) {
-    this.document = clone(seed);
+  constructor(seed: Partial<RepositoryDocument> = EMPTY_DOCUMENT) {
+    this.document = normalizeDocument(clone(seed));
   }
 
   async read(): Promise<RepositoryDocument> {
@@ -67,7 +97,7 @@ export class MemoryRepository implements Repository {
     },
   ): Promise<T> {
     const run = this.queue.then(() => {
-      const { document, result } = fn(clone(this.document));
+      const { document, result } = fn(normalizeDocument(clone(this.document)));
       this.document = clone(document);
       return result;
     });
@@ -88,8 +118,8 @@ export class FileRepository implements Repository {
     });
   }
 
-  read(): Promise<RepositoryDocument> {
-    return this.store.read();
+  async read(): Promise<RepositoryDocument> {
+    return normalizeDocument(await this.store.read());
   }
 
   async update<T>(
@@ -100,7 +130,7 @@ export class FileRepository implements Repository {
   ): Promise<T> {
     let captured: T;
     await this.store.update((current) => {
-      const { document, result } = fn(current);
+      const { document, result } = fn(normalizeDocument(current));
       captured = result;
       return document;
     });
