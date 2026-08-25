@@ -52,6 +52,43 @@ word actually is gets settled by the talent recording takes, and never by argume
 have no trigger set. That is deliberate — six takes answers the blocking question and 72
 trigger sets nobody shoots does not. Author more only once script 01 has been recorded.
 
+### Rigs — the app opens the way you left it
+
+Every launch used to reset the arrangement, so four controls got re-set before
+every take. A **rig** is a named layout: which zones are on screen, which one is
+driven, the camera edge, the text preset. Two separate things, deliberately:
+
+- **The workspace** — the layout you last had on screen, restored on launch
+  whether or not you ever named anything. Nobody should have to name a rig to
+  stop re-configuring.
+- **A rig** — a named arrangement you pick from the chips. Worth it only if you
+  swap between physical setups.
+
+⚠️ **A rig carries layout ONLY — never script, corpus or trigger style.** Those
+are the axes of the A/B/C experiment and the talent flips them *during* a
+session; baking them in would mean picking a rig silently moves the person on
+camera to a different corpus. Same reason the restore brings back the layout and
+not the beat: a prompter that reopens mid-script has decided where you are.
+
+**The surface split is the design.** `save_rig` / `rename_rig` / `delete_rig`
+are on the agent surface — an agent may **author** an arrangement the talent can
+then choose. `remember_layout` is **UI-only**, like `set_active_context`: it
+decides what appears in front of a person at the moment a take starts.
+
+**Deleting a rig drops the name and leaves the stage alone.** Only the
+attribution to a rig that no longer exists is cleared. Both the core and the
+store enforce that, because either one alone would leave the other free to move
+the talent.
+
+The tuning controls (zones · driving · camera · text · rename · remove) fold
+into a drawer that starts shut once a layout has been restored. Everything in it
+BUILDS an arrangement, and that is a before-the-take decision.
+
+⚠️ **Nothing is remembered until something has been recalled** (`rigsLoaded`).
+The app writes the live layout back on every change, so a failed `list_rigs`
+that let it start writing anyway would overwrite a saved arrangement with the
+built-in default.
+
 ### Live edits reach the window — the loop this app exists for
 
 An agent writing through the control API shows up **in front of the talent immediately**, with no
@@ -64,8 +101,13 @@ beat. `store.refresh()` keeps every part of the selection that still exists, cla
 rather than resetting it, and raises a cue card **only** if the refresh genuinely moved them —
 a cue announces a boundary the talent crossed, and data changing underneath is not a crossing.
 
-The event fires on a real change only: never on a query, a dry run, a preview, or a refused
-call. Waking every client for those trains them to ignore it.
+The event fires on a real change to the **data** only: never on a query, a dry run, a preview,
+or a refused call. Waking every client for those trains them to ignore it.
+
+Nor does a command that records only the **human's own working state** —
+`announces: false` in the catalog, today `remember_layout` and `set_active_context`. Otherwise
+every window re-fetches the whole set each time the talent nudges a divider, which is a busy
+loop wearing an event's clothes.
 
 **Explicitly NOT built, and not to be added without asking:**
 the AI layer (live listening, waffle detection, sync-to-voice, trigger *generation*),
@@ -100,9 +142,10 @@ says — that is how Open Design shipped an export verb that can never succeed.
 `test/capability-surface.test.ts` **pins the published set**. If it fails, do not edit the list
 to make it pass — decide deliberately that the verb belongs on the surface it claims.
 
-Three verbs are **UI-only, permanently**: `approve_pending`, `list_pending` and
-`set_active_context`. The mechanism that satisfies a control must never be reachable through
-the surface that control constrains, and the talent's selection is not the agent's to forge.
+Four verbs are **UI-only, permanently**: `approve_pending`, `list_pending`,
+`set_active_context` and `remember_layout`. The mechanism that satisfies a control must never
+be reachable through the surface that control constrains, and neither the talent's selection
+nor the arrangement they open on is the agent's to forge.
 
 Destructive verbs are **preview → confirm → execute**. A `dryRun`, or a call with no approval,
 returns a preview and a `pendingId`; a human approves it in the UI; only then does the verb
@@ -112,6 +155,7 @@ act, and only for the exact input that was approved.
 teletubby health           # is the app up? (no token needed)
 teletubby capabilities     # every verb, with its contract
 teletubby call get_set
+teletubby call list_rigs   # saved arrangements + the workspace
 ```
 
 The app must be running — the surface lives in its process. Port and token come from
@@ -122,7 +166,7 @@ The app must be running — the surface lives in its process. Port and token com
 ```bash
 npm install        # npm ONLY — packageManager is pinned; pnpm blocks Electron's postinstall
 npm run dev        # Electron app; renderer on 7110, control API on 7111 (registered slots)
-npm test           # 177 tests
+npm test           # 273 tests
 npm run typecheck
 ```
 
@@ -181,9 +225,11 @@ a translucent surface, declare a real token for it (`--tt-veil`, `--tt-lane-alt`
 may be hand-edited.
 
 - `src/shared/script-set.ts` — **the domain model.** The Kybernesis set as `ScriptSet` +
-  `TALENTS`. Shapes and rules live in `src/shared/domain.ts`.
+  `TALENTS`. Shapes and rules live in `src/shared/domain.ts`; the arrangement vocabulary
+  (recording zones, camera sides, text presets) lives in `src/shared/rig.ts`, because a
+  vocabulary the main process has to enforce cannot be defined in the window.
 
-⚠️ **`domain.ts` must stay dependency-free.** The renderer imports it, and `@appydave/core`
+⚠️ **`domain.ts` and `rig.ts` must stay dependency-free.** The renderer imports it, and `@appydave/core`
 reaches `node:fs` through its config loader — which has no browser equivalent and breaks the
 renderer bundle outright. The Zod schemas live in `src/shared/domain-schema.ts`, imported only
 by the core in main. That is also where they belong: validation happens where writes happen.
