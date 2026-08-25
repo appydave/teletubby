@@ -145,6 +145,13 @@ interface PrompterState {
    * is remembered until something has been recalled.
    */
   rigsLoaded: boolean;
+  /**
+   * Whether a stored arrangement was actually applied — as opposed to the app
+   * falling back to the opening one. Drives whether the tuning controls start
+   * open: on a machine that has never run this, the talent has a layout to set
+   * up; on every launch after that, they have one already.
+   */
+  restoredLayout: boolean;
 
   cue: CueCard | null;
   /** Increments each time a step was refused at the boundary, to replay the nudge. */
@@ -169,6 +176,8 @@ interface PrompterState {
   loadRigs: (rigs: Rig[], workspace: Workspace) => void;
   setRigs: (rigs: Rig[]) => void;
   applyRig: (rigId: string) => void;
+  adoptRig: (rig: Rig) => void;
+  forgetRig: (rigId: string) => void;
   dismissCue: () => void;
 }
 
@@ -225,6 +234,7 @@ export const useProm = create<PrompterState>((set, get) => ({
   rigs: [],
   rigId: null,
   rigsLoaded: false,
+  restoredLayout: false,
 
   cue: null,
   nudge: 0,
@@ -483,13 +493,14 @@ export const useProm = create<PrompterState>((set, get) => ({
   loadRigs: (rigs, workspace) => {
     const layout = workspace.layout;
     if (!layout || validateRigLayout(layout).length > 0) {
-      set({ rigs, rigId: workspace.rigId, rigsLoaded: true });
+      set({ rigs, rigId: workspace.rigId, rigsLoaded: true, restoredLayout: false });
       return;
     }
     set({
       rigs,
       rigId: workspace.rigId,
       rigsLoaded: true,
+      restoredLayout: true,
       ...cloneLayout(layout),
       visible: canonicalZones(layout.visible),
       transcriptEdge: edgeFor(layout.camera),
@@ -516,6 +527,34 @@ export const useProm = create<PrompterState>((set, get) => ({
       rigId: rig.id,
     });
   },
+
+  /**
+   * A rig this window just saved or renamed: insert-or-replace it and treat it
+   * as the applied one. The broadcast will bring the same rig back a moment
+   * later; doing it here as well means the chip lights up on the click rather
+   * than on the round trip.
+   */
+  adoptRig: (rig) => {
+    const rigs = get().rigs;
+    const index = rigs.findIndex((candidate) => candidate.id === rig.id);
+    set({
+      rigs:
+        index >= 0 ? rigs.map((candidate, i) => (i === index ? rig : candidate)) : [...rigs, rig],
+      rigId: rig.id,
+    });
+  },
+
+  /**
+   * Drop a rig from the list WITHOUT touching the arrangement on screen.
+   * Deleting a name must never repaint a stage someone is talking to — the
+   * core makes the same distinction, and both have to, because either one
+   * alone would leave the other free to move the talent.
+   */
+  forgetRig: (rigId) =>
+    set((s) => ({
+      rigs: s.rigs.filter((rig) => rig.id !== rigId),
+      rigId: s.rigId === rigId ? null : s.rigId,
+    })),
 
   dismissCue: () => set({ cue: null }),
 }));

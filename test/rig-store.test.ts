@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { KYBERNESIS_PHASE_1 } from '@shared/script-set';
 import { DEFAULT_LAYOUT, type Rig, type RigLayout, type Workspace } from '@shared/rig';
+import { describe as describeRig, slugify } from '../src/renderer/src/components/RigBar';
 import {
   activeRig,
   currentParagraph,
@@ -259,5 +260,94 @@ describe('the live layout', () => {
     captured.weights.triggers = 99;
     expect(s().visible).toEqual(['triggers', 'paragraph']);
     expect(s().weights.triggers).toBe(2);
+  });
+});
+
+describe('a rig this window just saved', () => {
+  beforeEach(() => {
+    s().loadRigs([STAGE_LEFT], workspace());
+  });
+
+  it('appears and lights up without waiting for the round trip', () => {
+    s().adoptRig(WIDE);
+    expect(s().rigs.map((rig) => rig.id)).toEqual(['stage-left', 'wide']);
+    expect(s().rigId).toBe('wide');
+  });
+
+  it('replaces in place, so a rename does not reshuffle the row', () => {
+    // Chips moving under the cursor between takes is its own small betrayal.
+    s().adoptRig(WIDE);
+    s().adoptRig({ ...STAGE_LEFT, label: 'Glass · left' });
+    expect(s().rigs.map((rig) => rig.label)).toEqual(['Glass · left', 'Wide']);
+  });
+});
+
+describe('removing a rig', () => {
+  beforeEach(() => {
+    s().loadRigs([STAGE_LEFT, WIDE], workspace());
+    s().applyRig('stage-left');
+  });
+
+  it('drops the name and leaves the stage alone', () => {
+    // Deleting a NAME must never repaint a screen someone is talking to. The
+    // core makes the same distinction; both have to, or either one alone would
+    // leave the other free to move the talent.
+    const before = layoutOf(s());
+    s().forgetRig('stage-left');
+
+    expect(s().rigs.map((rig) => rig.id)).toEqual(['wide']);
+    expect(s().rigId).toBeNull();
+    expect(layoutOf(s())).toEqual(before);
+  });
+
+  it('leaves the applied rig alone when a different one goes', () => {
+    s().forgetRig('wide');
+    expect(s().rigId).toBe('stage-left');
+    expect(rigModified(s())).toBe(false);
+  });
+});
+
+describe('whether the tuning controls start open', () => {
+  it('opens them on a machine that has never run this', () => {
+    s().loadRigs([], workspace());
+    expect(s().restoredLayout).toBe(false);
+  });
+
+  it('leaves them shut once there is an arrangement to restore', () => {
+    s().loadRigs([], workspace({ layout: STAGE_LEFT.layout }));
+    expect(s().restoredLayout).toBe(true);
+  });
+
+  it('counts a stored layout the domain refuses as nothing restored', () => {
+    s().loadRigs([], workspace({ layout: layout({ visible: ['paragraph'], driven: 'major' }) }));
+    expect(s().restoredLayout).toBe(false);
+  });
+});
+
+describe('naming a rig', () => {
+  it.each([
+    ['Stage left', 'stage-left'],
+    ['  Glass · LEFT  ', 'glass-left'],
+    ['desk / right', 'desk-right'],
+    ['2 up', '2-up'],
+  ])('turns %o into an id the domain accepts', (label, expected) => {
+    expect(slugify(label)).toBe(expected);
+    // The domain's id rule: starts alphanumeric, kebab thereafter.
+    expect(slugify(label)).toMatch(/^[a-z0-9][a-z0-9\-/.]*$/);
+  });
+
+  it('returns nothing for a name with no letters or numbers, rather than a bad id', () => {
+    // The caller checks for this and says so. Minting `---` would store a rig
+    // nobody can name twice.
+    expect(slugify('···')).toBe('');
+  });
+});
+
+describe('what a chip says on hover', () => {
+  it('describes the arrangement without applying it', () => {
+    // So nobody has to try a rig on, mid-session, to find out what it is.
+    expect(describeRig(STAGE_LEFT)).toBe(
+      'triggers · paragraph — driving paragraph, lens left, stage text',
+    );
   });
 });

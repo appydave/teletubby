@@ -30,6 +30,9 @@ import {
   TranscriptDrawer,
   TriggerZone,
 } from './components/Zones';
+import { Chip, Group } from './components/Controls';
+import RigAdmin from './components/RigAdmin';
+import RigBar from './components/RigBar';
 import CueOverlay from './components/CueOverlay';
 import Divider from './components/Divider';
 import CadencePanel from './components/CadencePanel';
@@ -151,6 +154,13 @@ function Waiting({ message, failed }: { message: string; failed?: boolean }): JS
 
 function Stage(): JSX.Element {
   const [cadenceOpen, setCadenceOpen] = useState(false);
+  /**
+   * The tuning controls start open only on a machine that has never run this —
+   * there the talent has an arrangement to build. Every launch after that they
+   * already have one, and four rows of chips they will not touch is exactly the
+   * screen-attention the North Star test rules out.
+   */
+  const [tuneOpen, setTuneOpen] = useState(() => !useProm.getState().restoredLayout);
   const script = useProm(currentScript);
   const transcript = useProm(currentTranscript);
   const paragraph = useProm(currentParagraph);
@@ -358,48 +368,60 @@ function Stage(): JSX.Element {
           </Group>
         </div>
 
-        {/* Zones, driven zone, and the camera edge everything bends to. */}
+        {/* Which arrangement. One row, and the only one that matters before a take. */}
+        <RigBar onOpenTune={() => setTuneOpen((open) => !open)} />
+
+        {/* Everything that BUILDS an arrangement, folded away once you have one.
+            Zones, the driven zone, the camera edge and the text preset are all
+            decisions made before the camera runs — and rigs exist so they are
+            made once rather than before every take. */}
+        {tuneOpen && (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge bg-lane-alt px-5 py-2">
+            <Group label="Zones">
+              {RECORDING_SET.map((zone) => (
+                <Chip key={zone} on={visible.includes(zone)} onClick={() => toggleZone(zone)}>
+                  {ZONE_LABEL[zone]}
+                </Chip>
+              ))}
+            </Group>
+
+            <Group label="Driving">
+              {RECORDING_SET.map((zone) => (
+                <Chip
+                  key={zone}
+                  on={driven === zone}
+                  disabled={!visible.includes(zone)}
+                  onClick={() => setDriven(zone)}
+                >
+                  {ZONE_LABEL[zone]}
+                </Chip>
+              ))}
+            </Group>
+
+            <Group label="Camera">
+              {CAMERA_SIDES.map((side) => (
+                <Chip key={side} on={camera === side} onClick={() => setCamera(side)}>
+                  {side === 'left' ? '◀ Left' : 'Right ▶'}
+                </Chip>
+              ))}
+            </Group>
+
+            <Group label="Text">
+              {TEXT_PRESETS.map((preset) => (
+                <Chip key={preset} on={text === preset} onClick={() => setText(preset)}>
+                  {PRESET_LABEL[preset]}
+                </Chip>
+              ))}
+            </Group>
+
+            <div className="flex w-full items-center gap-3 border-t border-edge pt-2">
+              <RigAdmin />
+            </div>
+          </div>
+        )}
+
+        {/* Presentation — the toggles with keys on them, always reachable. */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge px-5 py-2">
-          <Group label="Zones">
-            {RECORDING_SET.map((zone) => (
-              <Chip key={zone} on={visible.includes(zone)} onClick={() => toggleZone(zone)}>
-                {ZONE_LABEL[zone]}
-              </Chip>
-            ))}
-          </Group>
-
-          <Group label="Driving">
-            {RECORDING_SET.map((zone) => (
-              <Chip
-                key={zone}
-                on={driven === zone}
-                disabled={!visible.includes(zone)}
-                onClick={() => setDriven(zone)}
-              >
-                {ZONE_LABEL[zone]}
-              </Chip>
-            ))}
-          </Group>
-
-          <Group label="Camera">
-            {CAMERA_SIDES.map((side) => (
-              <Chip key={side} on={camera === side} onClick={() => setCamera(side)}>
-                {side === 'left' ? '◀ Left' : 'Right ▶'}
-              </Chip>
-            ))}
-          </Group>
-        </div>
-
-        {/* Presentation. */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge px-5 py-2">
-          <Group label="Text">
-            {TEXT_PRESETS.map((preset) => (
-              <Chip key={preset} on={text === preset} onClick={() => setText(preset)}>
-                {PRESET_LABEL[preset]}
-              </Chip>
-            ))}
-          </Group>
-
           <Chip on={cadenceOpen} onClick={() => setCadenceOpen((open) => !open)}>
             Cadence
           </Chip>
@@ -475,52 +497,5 @@ function Stage(): JSX.Element {
         </span>
       </footer>
     </div>
-  );
-}
-
-function Group({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
-  return (
-    <div className="flex items-center gap-1.5">
-      <span className="font-display text-[0.65rem] uppercase tracking-[0.18em] text-muted">
-        {label}
-      </span>
-      {children}
-    </div>
-  );
-}
-
-function Chip({
-  on,
-  disabled,
-  onClick,
-  title,
-  mono,
-  children,
-}: {
-  on: boolean;
-  disabled?: boolean;
-  onClick: () => void;
-  title?: string;
-  mono?: boolean;
-  children: React.ReactNode;
-}): JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      aria-pressed={on}
-      className={[
-        'rounded border px-2.5 py-0.5 uppercase tracking-wide transition',
-        mono ? 'font-mono text-xs normal-case' : 'font-display text-[0.7rem]',
-        on
-          ? 'border-edge-strong bg-driven text-ink'
-          : 'border-edge bg-card text-muted hover:text-ink',
-        disabled ? 'cursor-not-allowed opacity-35 hover:text-muted' : '',
-      ].join(' ')}
-    >
-      {children}
-    </button>
   );
 }
