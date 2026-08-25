@@ -13,6 +13,23 @@ import {
   type Transcript,
   type TriggerStyle,
 } from '@shared/domain';
+import {
+  CAMERA_SIDES,
+  DEFAULT_LAYOUT,
+  RECORDING_SET,
+  TEXT_PRESETS,
+  canonicalZones,
+  cloneLayout,
+  findRig,
+  sameLayout,
+  validateRigLayout,
+  type CameraSide,
+  type Rig,
+  type RigLayout,
+  type RecordingZone,
+  type TextPreset,
+  type Workspace,
+} from '@shared/rig';
 
 /**
  * THE ZONE MODEL — requirements §1 and §2.
@@ -53,12 +70,19 @@ export const ZONES = ['major', 'minor', 'triggers', 'paragraph', 'transcript'] a
 export type Zone = (typeof ZONES)[number];
 
 /**
- * What you DRIVE while talking. The full transcript is deliberately not here:
- * it is a skim surface for finding your place, not something you read from
- * mid-take, so it arrives as a slide-out instead of a column.
+ * The recording set, the camera sides and the text presets are DOMAIN
+ * vocabulary now, not the store's — a rig is data the main process validates,
+ * and a vocabulary the core has to enforce cannot be defined in the window.
+ * Re-exported here so every existing caller keeps its single import.
  */
-export const RECORDING_SET = ['major', 'minor', 'triggers', 'paragraph'] as const;
-export type RecordingZone = (typeof RECORDING_SET)[number];
+export {
+  CAMERA_SIDES,
+  RECORDING_SET,
+  TEXT_PRESETS,
+  type CameraSide,
+  type RecordingZone,
+  type TextPreset,
+};
 
 export const ZONE_LABEL: Record<Zone, string> = {
   major: 'Major',
@@ -67,14 +91,6 @@ export const ZONE_LABEL: Record<Zone, string> = {
   paragraph: 'Paragraph',
   transcript: 'Transcript',
 };
-
-/** Which edge the lens is on. Everything about layout bends to this (§2). */
-export const CAMERA_SIDES = ['left', 'right'] as const;
-export type CameraSide = (typeof CAMERA_SIDES)[number];
-
-/** Three named presets — one decision before the take, never a ±stepper. */
-export const TEXT_PRESETS = ['standard', 'large', 'stage'] as const;
-export type TextPreset = (typeof TEXT_PRESETS)[number];
 
 export interface CueCard {
   label: string;
@@ -109,6 +125,18 @@ interface PrompterState {
   mirror: boolean;
   focus: boolean;
   text: TextPreset;
+
+  /**
+   * Named arrangements, and the one currently applied.
+   *
+   * `rigId` survives the talent tweaking the layout afterwards — the chip reads
+   * as *modified* rather than deselecting itself, because a chip that goes dark
+   * the moment you nudge a divider tells you you have left your rig when you
+   * have not.
+   */
+  rigs: Rig[];
+  rigId: string | null;
+
   cue: CueCard | null;
   /** Increments each time a step was refused at the boundary, to replay the nudge. */
   nudge: number;
@@ -129,6 +157,9 @@ interface PrompterState {
   toggleMirror: () => void;
   toggleFocus: () => void;
   setText: (preset: TextPreset) => void;
+  loadRigs: (rigs: Rig[], workspace: Workspace) => void;
+  setRigs: (rigs: Rig[]) => void;
+  applyRig: (rigId: string) => void;
   dismissCue: () => void;
 }
 
@@ -174,18 +205,17 @@ export const useProm = create<PrompterState>((set, get) => ({
   style: null,
   step: 0,
 
-  // An opening arrangement, not a default the app defends: the triggers plus
-  // the paragraph they belong to. The talent changes it and it stays changed.
-  visible: ['triggers', 'paragraph'],
-  driven: 'triggers',
-  weights: { major: 1, minor: 1, triggers: 2, paragraph: 2 },
-  camera: 'right',
+  // The opening arrangement — and only on a machine that has never run the app.
+  // From the second launch the workspace supplies it (`loadRigs`), which is the
+  // whole reason rigs exist: the talent stopped re-setting four controls before
+  // every take.
+  ...cloneLayout(DEFAULT_LAYOUT),
   transcriptOpen: false,
-  transcriptEdge: 'left',
+  transcriptEdge: edgeFor(DEFAULT_LAYOUT.camera),
 
-  mirror: false,
-  focus: false,
-  text: 'standard',
+  rigs: [],
+  rigId: null,
+
   cue: null,
   nudge: 0,
 
@@ -404,13 +434,7 @@ export const useProm = create<PrompterState>((set, get) => ({
     set({ driven: zone });
   },
 
-  setCamera: (side) =>
-    set({
-      camera: side,
-      // The skim surface follows the lens: it opens from the FAR edge, so it
-      // can never slide across the zone the talent is looking at.
-      transcriptEdge: side === 'left' ? 'right' : 'left',
-    }),
+  setCamera: (side) => set({ camera: side, transcriptEdge: edgeFor(side) }),
 
   /**
    * Move the seam between two adjacent zones. Weight moves from one to the
@@ -434,8 +458,64 @@ export const useProm = create<PrompterState>((set, get) => ({
   toggleMirror: () => set((s) => ({ mirror: !s.mirror })),
   toggleFocus: () => set((s) => ({ focus: !s.focus })),
   setText: (preset) => set({ text: preset }),
+
+  /**
+   * First load: adopt the rigs, and restore the arrangement the talent quit
+   * with. `workspace.layout` is null only on a machine that has never run the
+   * app — every other launch comes back exactly as it was left.
+   *
+   * It restores the LAYOUT and nothing else. Which script, which corpus, which
+   * style and which beat are deliberately not remembered: a prompter that
+   * reopens mid-script is a prompter that has decided where you are, and the
+   * cue-card rules exist precisely because being moved without being told is
+   * the thing that ruins a take.
+   */
+  loadRigs: (rigs, workspace) => {
+    const layout = workspace.layout;
+    if (!layout || validateRigLayout(layout).length > 0) {
+      set({ rigs, rigId: workspace.rigId });
+      return;
+    }
+    set({
+      rigs,
+      rigId: workspace.rigId,
+      ...cloneLayout(layout),
+      visible: canonicalZones(layout.visible),
+      transcriptEdge: edgeFor(layout.camera),
+    });
+  },
+
+  /**
+   * New rig data with no arrangement change — the refresh path. An agent that
+   * saved a rig must not repaint the stage of someone mid-take; the chips gain
+   * a name, and that is all that may happen.
+   */
+  setRigs: (rigs) => set({ rigs }),
+
+  applyRig: (rigId) => {
+    const rig = findRig(get().rigs, rigId);
+    // A rig is validated before it is stored, so an invalid one here means the
+    // store is ahead of this window. Ignoring it beats rearranging the stage
+    // into something the domain already refused.
+    if (!rig || validateRigLayout(rig.layout).length > 0) return;
+    set({
+      ...cloneLayout(rig.layout),
+      visible: canonicalZones(rig.layout.visible),
+      transcriptEdge: edgeFor(rig.layout.camera),
+      rigId: rig.id,
+    });
+  },
+
   dismissCue: () => set({ cue: null }),
 }));
+
+/**
+ * The skim surface follows the lens: it opens from the FAR edge, so it can
+ * never slide across the zone the talent is looking at.
+ */
+function edgeFor(camera: CameraSide): CameraSide {
+  return camera === 'left' ? 'right' : 'left';
+}
 
 /* ------------------------------------------------------------------ *
  * Derived selectors — every one reads from `step` alone
@@ -610,3 +690,39 @@ export type Rank = 'driven' | 'follower';
  */
 export const rankOf = (driven: RecordingZone, zone: Zone): Rank =>
   zone === driven ? 'driven' : 'follower';
+
+/* ------------------------------------------------------------------ *
+ * Rigs
+ * ------------------------------------------------------------------ */
+
+/**
+ * The live arrangement, as a rig would store it.
+ *
+ * ⚠️ **Never call this as a component selector.** It builds a fresh object with
+ * a fresh `visible` array and `weights` record every call, so `useProm(layoutOf)`
+ * re-renders forever — the same blank-window bug documented in `docs/kdd/`, and
+ * `useShallow` does not save you because the nested `weights` is a new reference
+ * too. Read it from `useProm.getState()` inside an effect or a handler.
+ */
+export const layoutOf = (s: PrompterState): RigLayout => ({
+  visible: canonicalZones(s.visible),
+  driven: s.driven,
+  weights: { ...s.weights },
+  camera: s.camera,
+  text: s.text,
+  mirror: s.mirror,
+  focus: s.focus,
+});
+
+/** The rig currently applied, if it still exists. */
+export const activeRig = (s: PrompterState): Rig | undefined =>
+  s.rigId ? findRig(s.rigs, s.rigId) : undefined;
+
+/**
+ * Whether the talent has moved away from the rig they picked. Returns a
+ * BOOLEAN on purpose — it is safe as a component selector, unlike `layoutOf`.
+ */
+export const rigModified = (s: PrompterState): boolean => {
+  const rig = activeRig(s);
+  return rig ? !sameLayout(rig.layout, layoutOf(s)) : false;
+};

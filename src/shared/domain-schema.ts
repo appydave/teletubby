@@ -25,6 +25,8 @@ import type {
   TriggerSet,
 } from './domain.js';
 import { AUTHORSHIPS, TRANSCRIPT_KINDS, TRIGGER_STYLES } from './domain.js';
+import type { Rig, RigLayout, Workspace } from './rig.js';
+import { CAMERA_SIDES, RECORDING_SET, TEXT_PRESETS } from './rig.js';
 
 const id = (label: string): z.ZodString =>
   z
@@ -108,4 +110,34 @@ export const talentSchema: z.ZodType<Talent> = z.object({
   id: id('talent id'),
   name: z.string().trim().min(1, 'talent name must not be empty'),
   envelope: cadenceEnvelopeSchema,
+});
+
+/* ------------------------------------------------------------------ *
+ * Rigs — the arrangement, validated where it is written
+ * ------------------------------------------------------------------ */
+
+export const rigLayoutSchema: z.ZodType<RigLayout> = z.object({
+  visible: z.array(z.enum(RECORDING_SET)).min(1, 'a rig must show at least one zone'),
+  driven: z.enum(RECORDING_SET),
+  weights: z.object({
+    major: z.number().finite(),
+    minor: z.number().finite(),
+    triggers: z.number().finite(),
+    paragraph: z.number().finite(),
+  }),
+  camera: z.enum(CAMERA_SIDES),
+  text: z.enum(TEXT_PRESETS),
+  mirror: z.boolean(),
+  focus: z.boolean(),
+});
+
+export const rigSchema: z.ZodType<Rig> = z.object({
+  id: id('rig id'),
+  label: z.string().trim().min(1, 'a rig needs a name to be pickable'),
+  layout: rigLayoutSchema,
+});
+
+export const workspaceSchema: z.ZodType<Workspace> = z.object({
+  layout: rigLayoutSchema.nullable(),
+  rigId: id('rig id').nullable(),
 });
