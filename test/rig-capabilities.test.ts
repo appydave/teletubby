@@ -273,6 +273,17 @@ describe('the change event', () => {
     expect(seen).toEqual(['save_rig']);
   });
 
+  it('stays silent when the talent nudges their own layout', async () => {
+    // `remember_layout` changes the store, and still must not wake anybody.
+    // Every window re-fetching the whole set each time a divider moves is a
+    // busy loop wearing an event's clothes — and the channel means "the data
+    // changed underneath you", which this is not.
+    const seen: string[] = [];
+    core.onChange((event) => seen.push(event.capability));
+    unwrap(await asUi('remember_layout', { layout: STAGE_LEFT }));
+    expect(seen).toEqual([]);
+  });
+
   it('does not fire on a dry run', async () => {
     const seen: string[] = [];
     core.onChange((event) => seen.push(event.capability));

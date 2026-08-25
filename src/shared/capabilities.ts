@@ -84,6 +84,17 @@ export interface CapabilityMeta {
   confirmationRequired: boolean;
   /** Accepts `dryRun: true` and returns a preview instead of acting. */
   supportsDryRun: boolean;
+  /**
+   * Whether a real change here wakes every other client.
+   *
+   * True for anything that changes the DATA — that is the whole reason the
+   * Event primitive exists, so an agent's edit reaches the window without a
+   * restart. False for a command that only records the human's own working
+   * state: their selection, their arrangement. Broadcasting those makes every
+   * window re-fetch the entire set each time the talent nudges a divider, on a
+   * channel whose meaning is "the data changed underneath you".
+   */
+  announces: boolean;
   /** Honours `idempotencyKey` and replays the original result on retry. */
   supportsIdempotencyKey: boolean;
   failureModes: readonly ErrorCode[];
@@ -113,6 +124,7 @@ const query = (
   confirmationRequired: false,
   supportsDryRun: false,
   supportsIdempotencyKey: false,
+  announces: false,
   failureModes: READ_FAILURES,
   ...extra,
 });
@@ -131,6 +143,7 @@ const command = (
   confirmationRequired: false,
   supportsDryRun: true,
   supportsIdempotencyKey: true,
+  announces: true,
   failureModes: WRITE_FAILURES,
   ...extra,
 });
@@ -174,6 +187,8 @@ export const CAPABILITIES: readonly CapabilityMeta[] = [
       idempotent: true,
       supportsDryRun: false,
       supportsIdempotencyKey: false,
+      // The talent moving through their own script is not news to anybody.
+      announces: false,
     },
   ),
 
@@ -241,6 +256,9 @@ export const CAPABILITIES: readonly CapabilityMeta[] = [
       idempotent: true,
       supportsDryRun: false,
       supportsIdempotencyKey: false,
+      // Fires on every nudge of a divider. Waking every window to re-fetch the
+      // whole set for that would be a busy loop wearing an event's clothes.
+      announces: false,
     },
   ),
 

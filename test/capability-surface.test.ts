@@ -199,6 +199,37 @@ describe('the external consumer contract', () => {
   });
 });
 
+/**
+ * WHO GETS WOKEN.
+ *
+ * `announces` decides whether a real change reaches every other client. It is
+ * true for anything that changes the DATA — that is the entire reason the Event
+ * primitive exists. It is false for a command that records only the human's own
+ * working state, because a window re-fetching the whole set every time the
+ * talent nudges a divider is a busy loop wearing an event's clothes.
+ */
+describe('the change event', () => {
+  const WORKING_STATE_ONLY = ['set_active_context', 'remember_layout'];
+
+  it.each(WORKING_STATE_ONLY)('%s does not wake other clients', (name) => {
+    expect(CAPABILITY_BY_NAME.get(name)?.announces).toBe(false);
+  });
+
+  it('is on for every command that changes the data', () => {
+    const silent = CAPABILITIES.filter((c) => c.kind === 'command' && !c.announces).map(
+      (c) => c.name,
+    );
+    // Enumerated, so a new command cannot be quietly born silent.
+    expect(silent.sort()).toEqual([...WORKING_STATE_ONLY].sort());
+  });
+
+  it('is never on for a query', () => {
+    for (const capability of CAPABILITIES.filter((c) => c.kind === 'query')) {
+      expect(capability.announces, `${capability.name} is a query`).toBe(false);
+    }
+  });
+});
+
 describe('every capability carries a usable contract', () => {
   it.each(CAPABILITIES)('$name', (capability) => {
     expect(capability.summary.trim().length).toBeGreaterThan(20);

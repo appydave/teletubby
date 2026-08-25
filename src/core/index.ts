@@ -50,8 +50,9 @@ export interface InvokeOptions {
 }
 
 /**
- * Emitted after a command actually CHANGES something — not on a query, not on a
- * dry run, not on a refused call.
+ * Emitted after a command actually changes the DATA — not on a query, not on a
+ * dry run, not on a refused call, and not for a command that records only the
+ * human's own working state (`announces: false` in the catalog).
  *
  * This is the Event primitive, and it was earned rather than assumed: the
  * renderer loads once at startup, so an agent authoring a trigger set left the
@@ -162,10 +163,12 @@ export function createCore(options: CoreOptions): Core {
 
       record(true, { dryRun });
 
-      // Announce only a real change. A query, a dry run and a refused call all
-      // leave the store exactly as it was, and waking every client for those
-      // would train them to ignore the event.
-      if (capability.kind === 'command' && !dryRun && didApply(data)) {
+      // Announce only a real change to the DATA. A query, a dry run and a
+      // refused call all leave the store exactly as it was, and waking every
+      // client for those would train them to ignore the event. Nor does a
+      // command that records only the human's own working state — see
+      // `announces` in the catalog.
+      if (capability.kind === 'command' && capability.announces && !dryRun && didApply(data)) {
         const event: ChangeEvent = { capability: name, principal, at: clock() };
         for (const listener of listeners) {
           try {
