@@ -481,6 +481,18 @@ blocking unknown for this whole product.
 - **Look at the window before claiming a UI change works.** Nothing in the automated checks
   catches a renderer that failed to mount.
 
+- **`.agents/skills/recipe/` is NOT stray — do not untrack it.** It is the Codex-facing
+  mirror of `.claude/skills/recipe/`, the AppyTron scaffold's recipe skill, and the two
+  differ by exactly one word on one line ("Codex reads" vs "Claude reads"). It looks like
+  debris because it entered in a rigs commit via `git add -A`, and because there is no
+  installed plugin by that name to compare against. It is byte-identical to samantha's
+  copy, and `captains-log` tracks 25 files under `.agents/` on the same convention. One
+  session has already proposed deleting it on a name collision alone.
+
+- **`AGENTS.md` is a POINTER to this file, not a copy.** It was a copy, and by 2026-08-26
+  it was six days and 241 lines behind — briefing Codex on a toolbar that no longer
+  existed. Do not re-expand it. If the brief is wrong, fix it here.
+
 - **The window has no native title bar.** `titleBarStyle: 'hiddenInset'` means the page must
   supply the drag region — `.tt-drag` on the title strip in `App.tsx`. Without it the window
   cannot be moved at all. (Fixed upstream in the AppyTron template too.)

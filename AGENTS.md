@@ -1,247 +1,38 @@
-# Teletubby
+# Teletubby — agent instructions
 
-## North Star
+**Read [CLAUDE.md](CLAUDE.md). It is the whole brief, and it applies to you.**
 
-> **Put the words in front of the talent in a shape they can talk to rather than read from —
-> and learn from every fumbled take so the next one comes out better.**
-
-Interviewed and ratified by David, 2026-08-19. Full document — including who this is for,
-whether it edits scripts, what Teletubby is NOT, and the test that settles feature arguments:
-**[docs/north-star.md](docs/north-star.md)**.
-
-The corollary that follows from it: three columns instead of one scrolling wall of text —
-topic headings · trigger words · full transcript. **Column 2 is the product**, everything else
-is context.
-
-**The test, when a feature argument comes up:** *does it put more of the talent's attention on
-the camera, and less on the screen?* If it adds something to read, or a control to learn, it
-does not fit.
-
-⚠️ **"Prompting" in this repo always means teleprompter craft — never LLM prompt engineering.**
-
-What gets built — the zone model, the camera-position constraint, trigger styles:
-**[docs/requirements.md](docs/requirements.md)**.
-
-Background: [docs/concept.md](docs/concept.md) · origin brainstorm
-[Captain's Log B421](docs/source/b421-2026-08-19-plaud.md).
+Everything an agent needs to work on this repo lives there: the North Star and the test
+that settles feature arguments, the capability-core rules, the zone model, the rig rules,
+the hot-zone frame for camera position, the prior-art rules that are requirements rather
+than preferences, the light-only styling constraint, and the gotchas that have each cost a
+session once already.
 
 ---
 
-## Current state
+## Why this file is a pointer and not a copy
 
-**Sessions 1 and 2 have landed, and the renderer is now a client of the capability core.**
+It used to be a copy. On 2026-08-26 it was **six days and 241 lines behind** `CLAUDE.md` —
+it still described a toolbar at the top of the window that no longer exists, and a reading
+line rule that had since been qualified. Any agent reading it was being briefed on an app
+that had moved.
 
-1. **The capability core + control API** (session 1) — the domain model, and a loopback HTTP
-   surface on **7111** that lets an agent read and write scripts, transcripts and trigger sets.
-2. **The zone model** (session 2) — four selectable zones, the driven zone placeable nearest
-   the lens, and both corpora switchable. The renderer loads everything through
-   `window.appytron.invoke` with the `ui` principal; it imports no script data.
+Nothing failed loudly, because a stale mirror never does. That is the same defect this repo
+has now been bitten by twice: `CLAUDE.md` documenting a CLI argument form the CLI does not
+accept, and this file documenting a layout the app no longer has. **A hand-maintained
+duplicate drifts, silently, always.**
 
-**The legacy flat `src/shared/scripts.ts` is gone**, along with its test. One generated shape,
-one authoring source.
+So the rule here matches David's knowledge convention — *one canonical file owns each piece
+of knowledge; others reference it and never duplicate it.* `CLAUDE.md` owns the brief.
 
-⚠️ **The trigger words are CANDIDATES, not an answer.** The North Star rules that what a trigger
-word actually is gets settled by the talent recording takes, and never by argument. Every set in
-`scripts/authored-domain.mjs` is there to be tested and thrown out cheaply.
+⚠️ **Do not "helpfully" re-expand this file.** Copying the brief back in here recreates
+exactly the drift it was written to end. If something is wrong or missing in the brief, fix
+it in `CLAUDE.md`.
 
-3. **The A/B/C experiment** (session 3) — script 01 carries all three styles on **both**
-   corpora, so the talent can move one variable at a time: which cadence, and which trigger
-   style. Six combinations, six takes.
+## The one thing that is not in CLAUDE.md: `.agents/`
 
-⚠️ **Scripts 02–12 still carry only the style-B specimen**, and their re-cadenced transcripts
-have no trigger set. That is deliberate — six takes answers the blocking question and 72
-trigger sets nobody shoots does not. Author more only once script 01 has been recorded.
-
-### Live edits reach the window — the loop this app exists for
-
-An agent writing through the control API shows up **in front of the talent immediately**, with no
-restart. `core.onChange` fires on a real change, main pushes it to every window on
-`control:changed`, and the renderer re-fetches.
-
-**The rule that matters more than the mechanism: a refresh must never move the talent.** Someone
-rewriting a trigger word must not yank the person on camera to a different script, corpus or
-beat. `store.refresh()` keeps every part of the selection that still exists, clamps the step
-rather than resetting it, and raises a cue card **only** if the refresh genuinely moved them —
-a cue announces a boundary the talent crossed, and data changing underneath is not a crossing.
-
-The event fires on a real change only: never on a query, a dry run, a preview, or a refused
-call. Waking every client for those trains them to ignore it.
-
-**Explicitly NOT built, and not to be added without asking:**
-the AI layer (live listening, waffle detection, sync-to-voice, trigger *generation*),
-any recording or clip capture, and human editing controls for scripts. Column 1 is a display
-column — nothing generates those headings automatically.
-
-Recording is not ours and never will be: the talent drives Ecamm, FliHub watches the folder
-and queues the takes. Script editing arrives by making the app **drivable** by an agent, not
-by growing an editor — see the North Star.
-
----
-
-## The capability core — read this before adding any feature
-
-**One API, N clients, none privileged.** Every verb lives in `src/shared/capabilities.ts` and
-is implemented once in `src/core/`. The renderer reaches it over IPC with the `ui` principal;
-an agent reaches it over loopback HTTP with the `agent` principal. Adapters hold **no**
-business logic.
-
-```
-  renderer ── control:invoke ──┐
-  agent    ── POST /api/invoke ┼──►  core.invoke  ──►  [GATE]  ──►  handler  ──►  repository
-  CLI      ── bin/teletubby ───┘
-```
-
-**The rule that keeps it true:** a capability reachable from the UI and not headlessly **is a
-regression**, and both land in the same PR. "I'll do the API later" is not a reason. A
-capability that lives in the renderer is not externally reachable no matter what the catalog
-says — that is how Open Design shipped an export verb that can never succeed.
-
-**Before exposing anything new**, both gates in `docs/spec.md` apply, and
-`test/capability-surface.test.ts` **pins the published set**. If it fails, do not edit the list
-to make it pass — decide deliberately that the verb belongs on the surface it claims.
-
-Three verbs are **UI-only, permanently**: `approve_pending`, `list_pending` and
-`set_active_context`. The mechanism that satisfies a control must never be reachable through
-the surface that control constrains, and the talent's selection is not the agent's to forge.
-
-Destructive verbs are **preview → confirm → execute**. A `dryRun`, or a call with no approval,
-returns a preview and a `pendingId`; a human approves it in the UI; only then does the verb
-act, and only for the exact input that was approved.
-
-```bash
-teletubby health           # is the app up? (no token needed)
-teletubby capabilities     # every verb, with its contract
-teletubby call get_set
-```
-
-The app must be running — the surface lives in its process. Port and token come from
-`~/Library/Application Support/teletubby/control.json`, written per launch.
-
-## Running it
-
-```bash
-npm install        # npm ONLY — packageManager is pinned; pnpm blocks Electron's postinstall
-npm run dev        # Electron app; renderer on 7110, control API on 7111 (registered slots)
-npm test           # 177 tests
-npm run typecheck
-```
-
-## The rules this app is built on
-
-These come from `docs/prior-art-kybernesis-prompter.md` — a working two-column prompter
-David drove live the day before this repo existed. They are **requirements, not
-preferences**; each one is a bug that already happened once.
-
-1. **Stepping is clamped inside its unit. One key means one scale of movement — and the
-   DRIVEN ZONE sets the scale.** `↑ ↓ Space` move by one paragraph when driving Paragraph, one
-   major topic when driving Major, one trigger when driving Triggers, and can *never* cross
-   into the next script. In the original prompter, down-arrow past the last beat silently
-   advanced the script and David got lost mid-take. On the first real take (B437) the arrows
-   ignored the driven zone entirely — five presses to advance one paragraph.
-2. **Every boundary crossing announces itself** — an end card at the edge that turns yellow
-   and names what's next, and a cue card on *every* script change whatever triggered it.
-   ⚠️ **A corpus switch is NOT a boundary crossing** and must stay silent: it is an A/B
-   comparison, and a card over the top hides the very difference you flipped across to see
-   (B437). Style switching has never had one, and that is why it feels right.
-3. **The trigger→paragraph map is authored data, never derived positionally.** It ships
-   beside the triggers in `scripts/build-scripts-data.mjs` and is validated at build time.
-   Proportional mapping was considered and rejected — a wrong sync is worse than none.
-4. **The driven column carries the strong marker, the follower a quieter one.** Two
-   equally-loud markers read as two competing claims about where you are.
-5. **Mirror mode is v1**, not deferred — it's one `scaleX(-1)` and prompter glass needs it.
-6. **Text size is three named presets**, never a ±stepper. One decision before the take.
-7. **The beat you are on holds a fixed height; the script moves up underneath it.** Jan,
-   watching David's eyes on the first take: the old centre-scrolling let him read *down* a 32"
-   screen instead of the page coming to him. `--tt-reading-line` + `scroll-padding-top` +
-   the `.tt-reading-list` spacers are what hold the line — the spacers are load-bearing, since
-   without them the first and last beats cannot reach it.
-
-## Styling — AppyDave, light only
-
-**This is a light-only brand.** `color-scheme: light` is pinned on `:root`, Tailwind's
-`dark:` variant is disabled outright in `tailwind.config.js`, and there is no OS-theme
-media query anywhere. Ghost-check before shipping:
-
-```bash
-grep -rc "prefers-color-scheme" src/   # every line must be :0
-```
-
-All colour lives as CSS custom properties in `src/renderer/src/index.css`; components
-consume tokens via Tailwind names (`bg-canvas`, `text-ink`, `border-driven`). **No component
-may contain a raw hex value.**
-
-⚠️ **Tailwind cannot apply an opacity modifier to a `var(--x)` colour.** `bg-canvas/92`
-compiles to *nothing* — the utility is silently dropped and the element renders with no
-background at all. This already cost one round of invisible cue-card backdrop. If you need
-a translucent surface, declare a real token for it (`--tt-veil`, `--tt-lane-alt`).
-
-## The data
-
-**Two generated files, one authoring source.** Both come from `npm run build:data`; neither
-may be hand-edited.
-
-- `src/shared/script-set.ts` — **the domain model.** The Kybernesis set as `ScriptSet` +
-  `TALENTS`. Shapes and rules live in `src/shared/domain.ts`.
-
-⚠️ **`domain.ts` must stay dependency-free.** The renderer imports it, and `@appydave/core`
-reaches `node:fs` through its config loader — which has no browser equivalent and breaks the
-renderer bundle outright. The Zod schemas live in `src/shared/domain-schema.ts`, imported only
-by the core in main. That is also where they belong: validation happens where writes happen.
-
-Authoring lives in two places, both by hand:
-`scripts/build-scripts-data.mjs` (per-paragraph headings, the one trigger set) and
-`scripts/authored-domain.mjs` (major-topic groupings, the re-cadenced corpus, talents).
-
-**Paragraphs are verbatim, always** — Tom's originals from
-`src/shared/data/kybernesis-phase-1.source.json`, the re-cadenced versions quoted from
-`~/dev/ad/brains/kybernesis/phase-1-scripts/v0N-rewrite.txt`. Retyping either is a provenance
-bug.
-
-### Three things the domain model gets right that the flat shape could not
-
-1. **Two heading levels** — major and minor topic. Requirements §1 needs both; the zone model
-   cannot be built without them.
-2. **The map belongs to the trigger set, not the script.** Each of the three styles has its own
-   step count over the same paragraphs, so each has its own map — and it binds to paragraph
-   **ids**, never indices, because `write_transcript` is a published verb.
-3. **Corpus is modelled.** Tom's originals and the re-cadenced rewrites are different corpora
-   of the same script and both are loadable. Scripts 1–3 carry both today.
-
-⚠️ **The generated set is the SEED, not the live copy.** The store lives at
-`~/Library/Application Support/teletubby/teletubby.json` and seeding **never overwrites** — an
-agent's trigger set written yesterday must survive today's rebuild.
-
-⚠️ **The app never invents a trigger.** Styles A and C are deliberately absent from the shipped
-data; they arrive through `write_trigger_set`. The one set that ships is honestly labelled
-style **B** (compressed concept).
-
-### The cadence gate
-
-`src/core/cadence.ts` is a port of `~/dev/ad/brains/kybernesis/phase-1-scripts/score.py` —
-eight deterministic threshold rules, no model, no listening, no FliHub. It scores the **script
-before the take**; scoring a *take* needs a transcript and is blocked (requirements §8).
-
-Thresholds live on `Talent` and are **never ported between talents** — David's envelope was
-measured from his own corpus, and applying it to Alex makes the gate meaningless.
-`test/cadence-gate.test.ts` pins per-document numbers straight from the Python; if one changes,
-re-run the Python rather than editing the table.
-
-Script 08's bullet set is the one specimen that survives from the original prompter,
-quoted verbatim in the prior-art doc. Treat it as the reference point for the trigger-word
-experiment, **not** as a settled rule — see `docs/open-questions.md` Q1, which is still the
-blocking unknown for this whole product.
-
-## Gotchas
-
-- **A Zustand selector that builds an array blanks the window.** `useProm(zoneOrder)` re-renders
-  forever because the array is a new reference each call — and the build, the typecheck and all
-  151 tests stay green while the window paints nothing. Any selector containing `[...]`, `.map`,
-  `.filter` or `?? []` needs `useShallow`. See `docs/kdd/learnings/`.
-- **Look at the window before claiming a UI change works.** Nothing in the automated checks
-  catches a renderer that failed to mount.
-
-- **The window has no native title bar.** `titleBarStyle: 'hiddenInset'` means the page must
-  supply the drag region — `.tt-drag` on the title strip in `App.tsx`. Without it the window
-  cannot be moved at all. (Fixed upstream in the AppyTron template too.)
-- **Preload is `.mjs`, not `.js`** — electron-vite emits `out/preload/index.mjs`.
-- **Renderer dev server is pinned to 7110** (`strictPort`), not Vite's default 5173.
+`.agents/skills/recipe/` is the **Codex-facing mirror of `.claude/skills/recipe/`**, the
+AppyTron scaffold's recipe skill. The two differ by one word on one line ("Codex reads" vs
+"Claude reads"). It is tracked deliberately and is the same convention `captains-log` uses
+at larger scale. **It is not stray, and it is not to be untracked** — see the note in
+`CLAUDE.md` under Gotchas.
