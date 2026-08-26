@@ -336,6 +336,15 @@ preferences**; each one is a bug that already happened once.
    screen instead of the page coming to him. `--tt-reading-line` + `scroll-padding-top` +
    the `.tt-reading-list` spacers are what hold the line — the spacers are load-bearing, since
    without them the first and last beats cannot reach it.
+   ⚠️ **The rule is the FIXED HEIGHT, not the number.** 26vh was chosen to leave two or three
+   already-said lines above the live one; the reclaimed state (`D`) moves the line to 0.5rem
+   because with the lens ABOVE the screen those said lines sit between the talent and the
+   camera. The mechanism is untouched — still a fixed height, still the script coming to you.
+   What it costs is real and worth naming: at 0.5rem there is *more* unsaid script visible
+   below the line, which is the direction of the B437 failure. What holds it back is that
+   reclaimed **is** `focus`, so every row that is not the live one is at `opacity-25` — the
+   text below the line is present but not legible at a glance. If that mitigation is ever
+   unpicked, the reclaimed reading line has to be revisited with it.
 
 ## Styling — AppyDave, light only
 
