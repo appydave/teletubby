@@ -133,7 +133,7 @@ export default function App(): JSX.Element {
 function Waiting({ message, failed }: { message: string; failed?: boolean }): JSX.Element {
   return (
     <div className="flex h-screen flex-col bg-canvas text-ink">
-      <div className="tt-drag h-10 shrink-0 border-b border-edge bg-panel" />
+      <div className="tt-drag h-6 shrink-0 border-b border-edge bg-panel" />
       <div className="flex flex-1 items-center justify-center px-10 text-center">
         <p className={['font-body text-script', failed ? 'text-ink' : 'text-muted'].join(' ')}>
           {message}
@@ -202,6 +202,41 @@ function Stage(): JSX.Element {
   useEffect(() => {
     document.documentElement.dataset.text = text;
   }, [text]);
+
+  /**
+   * THE RECLAIMED STATE — and it is `focus` (D), not a new binding.
+   *
+   * The camera is ABOVE the screen, so the band between the top of the display
+   * and the live line is dead weight: it pulls the talent's eyes down and away
+   * from the lens. Reclaiming it needs a way in and a way out, and there were
+   * only two acceptable shapes — collapse on its own once a take starts, or one
+   * keystroke consistent with the bare-letter bindings.
+   *
+   * Auto-collapse was rejected: the only signal available is "the talent
+   * stepped a beat", and lining a beat up before rolling is exactly when they
+   * step. Chrome that appears and vanishes on a guess is worse than chrome that
+   * is simply tall.
+   *
+   * ⚠️ A NEW letter was rejected too, and for the reason rigs exist. Nothing is
+   * remembered unless it is a rig property, and a rig's contents are settled —
+   * so a new key would have to be re-pressed before every single take, which is
+   * the exact chore rigs were built to end. `focus` is already bound to D,
+   * already stored in the rig, and already meant "everything except the live
+   * beat gets out of the way". Collapsing the lane's own chrome and pulling the
+   * reading line to the top is that same sentence one altitude up; dimming the
+   * neighbouring rows was only ever half of it.
+   *
+   * What it does NOT touch is the footer. Moving the strip to the foot is what
+   * made that possible: reclaiming the top band no longer costs the talent the
+   * corpus and style chips, so nothing they flip mid-session is behind D.
+   *
+   * The state is published as a root data attribute, like `data-text`, so one
+   * CSS rule restyles every lane at once rather than every zone learning it.
+   */
+  const reclaimed = focus;
+  useEffect(() => {
+    document.documentElement.dataset.reclaim = reclaimed ? 'on' : 'off';
+  }, [reclaimed]);
 
   /**
    * REMEMBER HOW THIS ENDED — the whole reason rigs exist.
@@ -312,90 +347,26 @@ function Stage(): JSX.Element {
 
   return (
     <div className="flex h-screen flex-col bg-canvas text-ink">
-      {/* ---------------- chrome: never mirrored, always readable ---------------- */}
-      <header className="shrink-0 border-b border-edge bg-panel">
-        {/* The title strip IS the drag handle — see .tt-drag in index.css.
-            It deliberately holds no controls, so nothing here needs to opt out. */}
-        <div className="tt-drag flex select-none items-baseline gap-3 py-3 pr-5">
-          <span className="font-display text-lg font-bold uppercase tracking-[0.2em] text-ink">
-            Teletubby
-          </span>
-          <span className="font-body text-xs text-muted">
-            {set.title} · glance, don&apos;t read
-          </span>
-        </div>
+      {/* ---------------- the drag rail ----------------
 
-        {/* ONE STRIP — only what changes DURING a take.
-            Six rows used to sit here and eat roughly a third of the window
-            before a word of script appeared. Everything that BUILDS an
-            arrangement moved into the setup panel; what is left is where you
-            are, which corpus, which style, and the way in. */}
-        <div className="tt-no-drag flex items-center gap-3.5 px-5 pb-2">
-          {/* The stepper walks to the NEIGHBOURING script. Jumping to 07 is what
-              the grid in the setup panel is for. Both are clamped by the store,
-              so neither can roll off the end of the set. */}
-          <div className="flex items-center gap-1">
-            <StepButton label="Previous script" disabled={!hasPrev} onClick={goToPrevScript}>
-              ◀
-            </StepButton>
-            <span className="rounded bg-driven px-1.5 font-mono text-xs text-ink">
-              {String(script.n).padStart(2, '0')}
-            </span>
-            <StepButton label="Next script" disabled={!hasNext} onClick={goToNextScript}>
-              ▶
-            </StepButton>
-          </div>
-          <span className="truncate font-display text-sm uppercase tracking-wide text-ink">
-            {script.title}
-          </span>
+          The narrowest top band this window can have, and it is measured, not
+          guessed. `titleBarStyle: 'hiddenInset'` makes macOS float the traffic
+          lights over the page whether or not the page draws anything up here —
+          measured at logical y 10-22. A rail shorter than 24px does not remove
+          them, it just puts them on top of the script.
 
-          <span className="h-4 w-px shrink-0 bg-edge" />
+          So 24px is the floor while the buttons exist. Below that needs
+          `setWindowButtonVisibility(false)` from the main process, which is a
+          real option and deliberately not taken here: losing close/minimise to
+          the mouse is a bigger surprise than 0.7cm is a win.
 
-          {/* Corpus and style STAY on the strip and stay live while the panel is
-              open. They are the two axes of the A/B/C experiment and the talent
-              flips them mid-session — putting them behind a gesture was the
-              flaw that nearly disqualified this direction. */}
-          <div className="flex shrink-0 gap-1.5">
-            {script.transcripts.map((t) => (
-              <Chip key={t.id} on={t.id === transcript.id} onClick={() => selectTranscript(t.id)}>
-                {t.corpus}
-              </Chip>
-            ))}
-          </div>
-          <div className="flex shrink-0 gap-1.5">
-            {(['near-verbatim', 'compressed-concept', 'loose-keywords'] as TriggerStyle[]).map(
-              (candidate) => {
-                const has = transcript.triggerSets.some((t) => t.style === candidate);
-                return (
-                  <Chip
-                    key={candidate}
-                    on={style === candidate}
-                    disabled={!has}
-                    onClick={() => selectStyle(candidate)}
-                    title={has ? candidate : `${candidate} — not authored yet`}
-                  >
-                    {TRIGGER_STYLE_LETTER[candidate]}
-                  </Chip>
-                );
-              },
-            )}
-          </div>
-
-          <span className="h-4 w-px shrink-0 bg-edge" />
-
-          <Chip on={cadenceOpen} onClick={() => setCadenceOpen((open) => !open)}>
-            Cadence
-          </Chip>
-
-          <span className="ml-auto shrink-0 font-mono text-[0.7rem] text-muted">
-            ↑ ↓ space step · T transcript · F fullscreen
-          </span>
-
-          <Chip on={setupOpen} onClick={toggleSetup}>
-            Setup <span className="font-mono text-[0.65rem] opacity-60">S</span>
-          </Chip>
-        </div>
-      </header>
+          ⚠️ THIS IS THE ONLY DRAG REGION THE WINDOW HAS. `hiddenInset` means
+          the page supplies it or the window cannot be moved at all. It holds
+          nothing, in any state, so there is nothing that can ever opt out of it
+          and nothing that can collapse it away. Everything that was up here is
+          in the footer now.
+      */}
+      <div className="tt-drag h-6 shrink-0 border-b border-edge bg-panel" />
 
       {/* ---------------- stage: mirrorable ---------------- */}
       <main className="relative flex flex-1 overflow-hidden">
@@ -459,11 +430,107 @@ function Stage(): JSX.Element {
         <CueOverlay />
       </main>
 
-      <footer className="shrink-0 border-t border-edge bg-panel px-5 py-1.5">
-        <span className="font-mono text-[0.7rem] text-muted">
-          {set.title} · beat {triggers.length === 0 ? 0 : step + 1}/{triggers.length} ·{' '}
-          {transcript.corpus} · driving {ZONE_LABEL[driven]} · lens {camera} · {script.takeaway}
-        </span>
+      {/* ---------------- the strip, at the FOOT ----------------
+
+          It used to be at the top, and being at the top was the whole problem:
+          the camera sits ABOVE the screen, so a strip up there is not merely
+          chrome, it is centimetres of distance between the lens and the first
+          word. Down here it costs the talent nothing — nobody's eyes travel
+          BELOW the script on their way to the camera.
+
+          It carries only what changes DURING a take: where you are, which
+          corpus, which style, Cadence, and the way in to Setup. Everything that
+          BUILDS an arrangement is still behind S.
+
+          This is also what dissolved the tension in the reclaimed state. When
+          the strip lived at the top, reclaiming the band meant hiding it, which
+          meant putting corpus and style behind a gesture — the exact thing that
+          nearly disqualified the setup panel. At the foot there is nothing to
+          hide: reclaim takes the lane chrome and the reading line, and the two
+          axes of the A/B/C experiment stay on screen and stay live. */}
+      <footer className="tt-no-drag shrink-0 border-t border-edge bg-panel">
+        <div className="flex items-center gap-3.5 px-4 py-1.5">
+          {/* The stepper walks to the NEIGHBOURING script. Jumping to 07 is what
+              the grid in the setup panel is for. Both are clamped by the store,
+              so neither can roll off the end of the set. */}
+          <div className="flex items-center gap-1">
+            <StepButton label="Previous script" disabled={!hasPrev} onClick={goToPrevScript}>
+              ◀
+            </StepButton>
+            <span className="rounded bg-driven px-1.5 font-mono text-xs text-ink">
+              {String(script.n).padStart(2, '0')}
+            </span>
+            <StepButton label="Next script" disabled={!hasNext} onClick={goToNextScript}>
+              ▶
+            </StepButton>
+          </div>
+          <span className="truncate font-display text-sm uppercase tracking-wide text-ink">
+            {script.title}
+          </span>
+
+          <span className="h-4 w-px shrink-0 bg-edge" />
+
+          {/* Corpus and style are the two axes of the A/B/C experiment and the
+              talent flips them mid-session, so they are never behind a gesture —
+              not the setup panel's, and not the reclaimed state's either. */}
+          <div className="flex shrink-0 gap-1.5">
+            {script.transcripts.map((t) => (
+              <Chip key={t.id} on={t.id === transcript.id} onClick={() => selectTranscript(t.id)}>
+                {t.corpus}
+              </Chip>
+            ))}
+          </div>
+          <div className="flex shrink-0 gap-1.5">
+            {(['near-verbatim', 'compressed-concept', 'loose-keywords'] as TriggerStyle[]).map(
+              (candidate) => {
+                const has = transcript.triggerSets.some((t) => t.style === candidate);
+                return (
+                  <Chip
+                    key={candidate}
+                    on={style === candidate}
+                    disabled={!has}
+                    onClick={() => selectStyle(candidate)}
+                    title={has ? candidate : `${candidate} — not authored yet`}
+                  >
+                    {TRIGGER_STYLE_LETTER[candidate]}
+                  </Chip>
+                );
+              },
+            )}
+          </div>
+
+          <span className="h-4 w-px shrink-0 bg-edge" />
+
+          <Chip on={cadenceOpen} onClick={() => setCadenceOpen((open) => !open)}>
+            Cadence
+          </Chip>
+
+          {/* Where you are, in words. The set title and the takeaway that used to
+              sit here are gone: neither changes during a take, and the takeaway
+              is a note about the script rather than a thing to read while
+              talking. */}
+          {/* Where you are, in words. The set title and the takeaway that used
+              to sit here are gone: neither changes during a take. The corpus is
+              gone too — the chips three inches to the left already say it, and
+              a status line that repeats a control is a line nobody reads. */}
+          <span className="ml-auto shrink-0 whitespace-nowrap font-mono text-[0.7rem] text-muted">
+            beat {triggers.length === 0 ? 0 : step + 1}/{triggers.length} · driving{' '}
+            {ZONE_LABEL[driven]} · lens {camera}
+            {reclaimed ? ' · reclaimed' : ''}
+          </span>
+
+          {/* The key legend is the first thing to go when the window narrows —
+              it is a reminder, and the chips beside it are controls. */}
+          <span className="hidden truncate font-mono text-[0.7rem] text-muted xl:inline">
+            ↑ ↓ space step · D reclaim · T · M · F
+          </span>
+
+          <span className="shrink-0">
+            <Chip on={setupOpen} onClick={toggleSetup}>
+              Setup <span className="font-mono text-[0.65rem] opacity-60">S</span>
+            </Chip>
+          </span>
+        </div>
       </footer>
     </div>
   );

@@ -182,4 +182,38 @@ describe('the strip’s script stepper', () => {
     s().goToNextScript();
     expect(s().step).toBe(0);
   });
+  it('shuts when the talent reclaims the top band, and does not reopen after', () => {
+    // Reclaiming the band above the first word while a 23rem panel still holds
+    // the driven lane sideways is half a move.
+    s().toggleSetup();
+    expect(s().setupOpen).toBe(true);
+
+    s().toggleFocus();
+    expect(s().focus).toBe(true);
+    expect(s().setupOpen).toBe(false);
+
+    // Leaving it does NOT bring the panel back. `setupOpen` is not remembered,
+    // so there is nothing to restore it to — and a config drawer appearing by
+    // itself is a panel between the talent and their next take.
+    s().toggleFocus();
+    expect(s().focus).toBe(false);
+    expect(s().setupOpen).toBe(false);
+  });
+
+  it('leaves the arrangement alone when it opens and when it reclaims', () => {
+    // The panel takes WIDTH and nothing else — including via focus, which now
+    // restyles the lanes. Neither may touch the saved rig properties.
+    const before = layoutOf(s());
+    s().toggleSetup();
+    s().toggleFocus();
+    const after = layoutOf(s());
+    expect(after.weights).toEqual(before.weights);
+    expect(after.visible).toEqual(before.visible);
+    expect(after.driven).toBe(before.driven);
+    expect(after.camera).toBe(before.camera);
+    expect(after.text).toBe(before.text);
+    // `focus` IS a rig property and IS meant to change — that is the whole
+    // point of reusing it rather than inventing a key nothing remembers.
+    expect(after.focus).toBe(true);
+  });
 });

@@ -37,7 +37,21 @@ const markerBar = (rank: Rank, active: boolean): string => {
 function useReadingLine(active: boolean, deps: unknown[]) {
   const ref = useRef<HTMLLIElement | null>(null);
   useEffect(() => {
-    if (active && ref.current) ref.current.scrollIntoView({ block: 'start' });
+    if (!active || !ref.current) return undefined;
+    const row = ref.current;
+    /*
+     * ⚠️ ONE FRAME LATE, ON PURPOSE.
+     *
+     * `scrollIntoView` reads `scroll-padding-top`, which IS the reading line —
+     * and the reclaimed state moves it (26vh -> 0.5rem). The state is published
+     * as a root data attribute from an effect in `Stage`, and React runs CHILD
+     * effects before parent ones, so scrolling straight away would use the OLD
+     * line and leave the live beat half off the top. That is exactly what it
+     * did. An animation frame lands after the attribute is on the element and
+     * after layout, so the row seats against the line that is actually current.
+     */
+    const frame = requestAnimationFrame(() => row.scrollIntoView({ block: 'start' }));
+    return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
   return ref;
@@ -58,11 +72,14 @@ function ZoneShell({
       data-zone={zone}
       data-rank={rank}
       className={[
-        'tt-lane-scroll h-full w-full px-6 py-6',
+        'tt-lane-scroll tt-lane-pad h-full w-full px-6 py-6',
         rank === 'driven' ? 'bg-canvas' : 'bg-lane-alt',
       ].join(' ')}
     >
-      <p className="mb-4 flex items-center gap-2 font-display text-[0.65rem] uppercase tracking-[0.2em] text-muted">
+      {/* Both of these carry a `tt-` hook so the RECLAIMED state can collapse
+          them from one CSS rule — see :root[data-reclaim='on'] in index.css.
+          The zone learns nothing about the state; the root publishes it. */}
+      <p className="tt-zone-label mb-4 flex items-center gap-2 font-display text-[0.65rem] uppercase tracking-[0.2em] text-muted">
         {ZONE_LABEL[zone]}
         {/* The driven zone says so in words as well as colour — a marker you
             have to decode is a thing to learn, which the Star's test forbids. */}
@@ -235,11 +252,30 @@ export function ParagraphZone({
 }): JSX.Element {
   return (
     <ZoneShell zone="paragraph" rank={rank}>
-      <div className={['rounded-r px-4 py-3', markerBar(rank, true)].join(' ')}>
+      {/*
+        THE DRIVEN-BEAT HIGHLIGHT — and note `markerBar(rank, true)`.
+
+        In every other zone the wash marks ONE ROW of a list, so it is the width
+        of the marker's claim: "of these, you are on this one." Here there is no
+        list — the zone renders exactly one paragraph — so `active` is hardcoded
+        true and the wash paints the whole zone. On script 01 beat 11 that was a
+        516px slab, 66% of the stage height, measured.
+
+        Why THAT beat: paragraph 3 is the long one in BOTH corpora — 375 chars
+        in v01-rewrite against a 212 mean, and 338 in tom-original, so switching
+        corpus does not shrink it. The text is verbatim and stays verbatim; the
+        height is a rhythm problem and is fixed here, not in the words.
+
+        `leading-snug` rather than `leading-relaxed` is the lever, and it is not
+        a new invention — it is what the trigger rows already use. At the stage
+        preset it takes the line box from 45px to 38px, which on an 11-line
+        paragraph is 77px off the slab.
+      */}
+      <div className={['tt-beat rounded-r px-4 py-1.5', markerBar(rank, true)].join(' ')}>
         {/* One paragraph, not a scrolling wall. This was the configuration that
             actually worked on camera — Jan, watching David's eyes: "the eyes is
             fixed just on the camera" (B437). */}
-        <p className="font-body text-script leading-relaxed text-ink">{paragraph?.text ?? '—'}</p>
+        <p className="font-body text-script leading-snug text-ink">{paragraph?.text ?? '—'}</p>
       </div>
 
       {/*
@@ -252,8 +288,10 @@ export function ParagraphZone({
         something follows, not more script.
       */}
       {next && (
-        <div className="mt-5 max-h-24 overflow-hidden border-l-2 border-transparent px-4">
-          <p className="font-display text-[0.6rem] uppercase tracking-[0.2em] text-muted">Next</p>
+        <div className="mt-4 max-h-24 overflow-hidden border-l-2 border-transparent px-4">
+          <p className="tt-zone-label font-display text-[0.6rem] uppercase tracking-[0.2em] text-muted">
+            Next
+          </p>
           <p className="mt-1 font-body text-script leading-relaxed text-muted opacity-45">
             {next.text}
           </p>
@@ -349,7 +387,11 @@ function Row({
   opacity?: string;
   children: React.ReactNode;
 }): JSX.Element {
-  const ref = useReadingLine(active, [dep]);
+  // `focus` is in the deps because it IS the reclaimed state, and reclaiming
+  // MOVES the reading line (26vh -> 0.5rem). Without it the lane keeps the
+  // scroll offset it had before the toggle, so the live beat lands wherever the
+  // old line used to be — half off the top, in the case that caught this.
+  const ref = useReadingLine(active, [dep, focus]);
   return (
     <li ref={ref}>
       <div

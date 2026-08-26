@@ -511,7 +511,18 @@ export const useProm = create<PrompterState>((set, get) => ({
   toggleSetup: () => set((s) => ({ setupOpen: !s.setupOpen })),
   closeSetup: () => set({ setupOpen: false }),
   toggleMirror: () => set((s) => ({ mirror: !s.mirror })),
-  toggleFocus: () => set((s) => ({ focus: !s.focus })),
+  /**
+   * Focus is the RECLAIMED state — the chrome above the first word collapses,
+   * not just the neighbouring rows dimming. Entering it therefore shuts the
+   * setup panel: reclaiming the top band while a 23rem panel still holds the
+   * driven lane away from the lens would be half a move.
+   *
+   * Leaving it does NOT reopen the panel. `setupOpen` is not remembered and
+   * never has been (a rig is what the stage looks like, not which drawer
+   * happened to be out), so there is nothing to restore it to.
+   */
+  toggleFocus: () =>
+    set((s) => (s.focus ? { focus: false } : { focus: true, setupOpen: false })),
   setText: (preset) => set({ text: preset }),
 
   /**

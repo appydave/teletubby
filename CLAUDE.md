@@ -87,6 +87,10 @@ word of script appeared. Now there is **one strip** carrying only what changes
 DURING a take — where you are, the corpus, the style, Cadence — and everything
 that BUILDS an arrangement lives in a **setup panel** on `S`.
 
+> The strip has since moved from the top of the window to the **footer**, because
+> the lens is above the screen — see *The top band* below. Everything in this
+> section still holds; only which edge the strip sits on changed.
+
 Four properties are the design, not decoration:
 
 1. **It is not a modal.** No scrim, no dim, nothing covered. The point of it is
@@ -101,7 +105,8 @@ Four properties are the design, not decoration:
    failure mode, whichever panel it is.
 4. **Corpus and style stay on the strip**, live, while the panel is open. They
    are the axes of the A/B/C experiment and get flipped mid-session; putting
-   them behind a gesture nearly disqualified this whole direction.
+   them behind a gesture nearly disqualified this whole direction. The same rule
+   is why the reclaimed state (`D`) leaves the footer strip alone.
 
 ⚠️ **The panel must never write the lane weights.** They narrow because a flex
 sibling took width and spring back when it closes. Lane widths are a saved rig
@@ -113,7 +118,7 @@ stage looks like; whether a config drawer happened to be open when you quit is
 not, and reopening on it would put a panel between the talent and their first
 take. It opens itself once, on a machine that has never run the app.
 
-The key is a bare `S`, with `Escape` to close. The mock drew ⌘K; every binding
+The key is a bare `S`, with `Escape` to close. `D` is the same shape — one bare letter. The mock drew ⌘K; every binding
 this app has is a single unmodified letter, and a chord would be the odd one out
 — and would collide with a command palette the day one arrives.
 
@@ -125,6 +130,99 @@ back to 01 is the silent-advance bug of rule 1, one level up.
 The app writes the live layout back on every change, so a failed `list_rigs`
 that let it start writing anyway would overwrite a saved arrangement with the
 built-in default.
+
+### The top band — the strip is at the FOOT, and `D` reclaims the rest
+
+The camera sits **above** the screen. A strip at the top of the window is therefore
+not chrome, it is centimetres of distance between the lens and the first word — the
+talent's eyes go down to read and have to come back up. Measured on a 1440×900 window
+(script 01, `stage` text, 36 logical px/cm on the 32" display):
+
+| band | before |
+|---|---|
+| title strip — existed only to be the drag region | 52px |
+| control strip | 31px |
+| lane `py-6` + the zone-label row | 58px |
+| beat block padding + half-lead | 25px |
+| **top of window → first word, PARAGRAPH driven** | **167px · 4.6cm** |
+| the reading line (26vh) on top of that, LIST zone at beat 1 | **336px · 9.3cm** |
+
+Two moves, and they are different in kind:
+
+1. **Always, no mode: the strip moved to the FOOTER** and the title strip is gone
+   (the set title it carried is already in the footer; "TELETUBBY" is a thing to read).
+   What is left at the top is a **24px drag rail**. Nobody's eyes travel *below* the
+   script on the way to a lens above it, so the strip costs nothing down there.
+2. **`D` — the reclaimed state.** Lane padding collapses, the zone-label row hides,
+   and the reading line moves to the top. First word at **40px · 1.1cm**.
+
+⚠️ **24px is a measured floor, not a taste.** `titleBarStyle: 'hiddenInset'` makes
+macOS float the traffic lights over the page at logical y 10–22 whether or not the
+page draws anything there. A shorter rail does not remove them, it puts them on top
+of the script. Going below needs `setWindowButtonVisibility(false)` from main, which
+costs close/minimise by mouse — a bigger surprise than 0.7cm is a win.
+
+⚠️ **The rail is the ONLY drag region the window has**, so it carries `.tt-drag`
+itself, holds nothing in any state, and can never be collapsed. Verified by dragging
+it and reading the window position back, not by reading the CSS.
+
+⚠️ **Reclaim is `focus` (D), deliberately not a new key.** Nothing is remembered
+unless it is a rig property, so a new binding would have to be re-pressed before every
+take — the exact chore rigs exist to end. `focus` is already bound, already stored,
+and already meant "everything except the live beat gets out of the way"; dimming the
+neighbouring rows was only ever half of that sentence.
+
+⚠️ **Reclaim does not touch the footer.** Moving the strip down is what made that
+possible: corpus and style — the two axes of the A/B/C experiment — stay on screen and
+stay live, so nothing the talent flips mid-session is behind `D`. When the strip was at
+the top, reclaiming meant hiding them, which is the flaw that nearly disqualified the
+setup panel.
+
+⚠️ **The reading line is MOVED, never deleted.** Rule 7 says the beat holds a *fixed*
+height and the script moves up underneath it; it does not say that height is 26vh. The
+26vh was there to leave two or three already-said lines above the live one — and with
+the lens above the screen, those said lines sit physically between the talent and the
+camera. Reclaimed, the value is in **rem, not vh**: the target is an absolute distance
+from the top of the display, and 26vh is 234px in a window and 374px fullscreen. The
+`.tt-reading-list` spacer stays non-zero so the first beat can still reach the line.
+`focus` is in the `useReadingLine` deps because moving the line has to re-seat the
+lane — otherwise the live beat lands where the old line used to be, half off the top.
+
+### The driven-beat highlight — a marker that was painting the whole zone
+
+Every other zone applies `markerBar` to **one row of a list**, so the wash is the width
+of its claim: *of these, you are on this one*. `ParagraphZone` renders exactly one
+paragraph and hardcodes `markerBar(rank, true)`, so the wash paints the entire zone.
+
+On script 01 beat 11 that measured **516px — 66% of the stage height**. The cause,
+in order of contribution:
+
+- **Authoring, and unfixable by rule.** Paragraph 3 is the long one in *both* corpora —
+  375 chars in `v01-rewrite` against a 212 mean, 338 in `tom-original`. Switching corpus
+  buys 11%. Paragraphs are verbatim; the fix is layout, never the words.
+- **Measure.** 375 chars at the `stage` preset into a 454px lane is ~33 characters per
+  line, below the 45–75 readable range — so the *line count* is inflated by the column,
+  not by the writing.
+- **Rhythm.** `leading-relaxed` gave a 45px line box.
+
+Fixed what could be fixed without touching text or `weights`: `leading-snug` (the
+rhythm the trigger rows already use) and `py-1.5`. Like-for-like, same beat, same panel
+state: **516px → 390px, the same 11 lines**. The height came out of the rhythm; the
+line count is still authoring × measure.
+
+⚠️ **Widening the driven lane is the remaining lever and it is the talent's, not
+ours.** `weights` is a saved rig property and the panel already may not write it; the
+same rule applies here. Widening the paragraph lane to ~65 characters per line would
+take paragraph 3 from 11 lines to about 6 — but it comes straight out of the trigger
+lane, and column 2 is the product.
+
+### Camera direction — above / above-left is NOT built
+
+`camera` is still two edges. `docs/camera-direction.md` is the written proposal, with
+the recommendation: widen it to a *position* (`{x, y}`) and derive lane order, panel
+entry edge and the reading line from it — and specifically **do not** stack the lanes
+vertically for a top lens, because that puts the followers further from it than side by
+side does. Read that before changing `CAMERA_SIDES`.
 
 ### Live edits reach the window — the loop this app exists for
 

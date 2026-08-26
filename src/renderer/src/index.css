@@ -166,6 +166,77 @@ body {
   padding-top: var(--tt-reading-line);
   padding-bottom: 78vh;
 }
+/* ==========================================================================
+   THE RECLAIMED STATE — `focus` (D), published as :root[data-reclaim='on'].
+
+   THE PROBLEM, MEASURED. The camera sits ABOVE the screen, so every pixel
+   between the top of the display and the live line pulls the talent's eyes
+   down and away from the lens. On a 1440x900 window, script 01, `stage` text,
+   before any of this existed:
+
+     84px   header — a title strip (52px) whose only job was to be the drag
+            region, stacked on the strip that carries the controls (31px)
+     24px   lane py-6
+     34px   the zone-label row ("PARAGRAPH  driving")
+     25px   the driven-beat block's own padding and half-lead
+     ----
+     167px  to the first word with the PARAGRAPH driven  = 4.6cm at 36px/cm
+   + 234px  the reading line (26vh), when a LIST zone is driven
+     ----
+     336px  measured, TRIGGERS driven on beat 1          = 9.3cm
+
+   The 84px went first and without a mode: the title strip is deleted and the
+   control strip moved to the FOOTER, leaving a 24px drag rail — the floor set
+   by the traffic lights, not by taste. What is left above the first word is the
+   lane's own chrome and the reading line, and that is what this state takes.
+
+   ⚠️ THE READING LINE IS NOT DELETED, IT IS MOVED. prior-art rule 7 says the
+   beat you are on holds a FIXED height and the script moves up underneath it —
+   it does NOT say that height must be 26vh, and 26vh was chosen to leave two
+   or three ALREADY-SAID lines above the live one. With the lens above the
+   screen those said lines sit physically between the talent and the camera,
+   which is the one place they must not be. Reclaimed, the line moves to the
+   top and the mechanism is untouched: still a fixed height, still the script
+   coming to you rather than your eyes going down the page.
+
+   ⚠️ AND IT STOPS BEING VIEWPORT-RELATIVE. The target is "within a centimetre
+   of the top of the display", which is an absolute distance; 26vh is 234px in
+   a window and 374px fullscreen, so a vh value misses the target by more the
+   bigger the screen gets. The reclaimed value is in rem for that reason.
+
+   ⚠️ THE SPACER STAYS NON-ZERO. `.tt-reading-list`'s padding-top is what lets
+   the FIRST beat reach the line at all — there is nothing above it to scroll
+   past. At 0 the first beat and only the first beat would sit at a different
+   height from every other one.
+   ========================================================================== */
+
+:root[data-reclaim='on'] {
+  --tt-reading-line: 0.5rem;
+}
+
+/* The lane's own breathing room. 24px of it is 0.7cm of lens distance. */
+:root[data-reclaim='on'] .tt-lane-pad {
+  padding-top: 0.25rem;
+}
+
+/* The zone label, and the "driving" chip with it.
+
+   This is a real cost, stated rather than hidden: the chip is what says which
+   zone is driven IN WORDS as well as in colour. Reclaimed, that claim is
+   carried by the canvas/lane-alt background split and the strong marker alone.
+   The trade is deliberate — a label is a thing to read, and the reclaimed state
+   is the one where the talent is looking at the lens, not the screen. Press D
+   and the words come back. */
+:root[data-reclaim='on'] .tt-zone-label {
+  display: none;
+}
+
+/* The driven beat's own padding, top and bottom. */
+:root[data-reclaim='on'] .tt-beat {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+
 .tt-lane-scroll::-webkit-scrollbar {
   width: 10px;
 }
