@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { KYBERNESIS_PHASE_1 } from '@shared/script-set';
 import { DEFAULT_LAYOUT, type Rig, type RigLayout, type Workspace } from '@shared/rig';
-import { describe as describeRig, slugify } from '../src/renderer/src/components/RigBar';
+import { describe as describeRig, slugify } from '../src/renderer/src/components/SetupPanel';
 import {
   activeRig,
   currentParagraph,

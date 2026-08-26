@@ -122,6 +122,23 @@ interface PrompterState {
   transcriptOpen: boolean;
   transcriptEdge: CameraSide;
 
+  /**
+   * The setup panel — everything that BUILDS an arrangement, in one slide-out.
+   *
+   * It is NOT part of a rig and it is NOT remembered. A rig is what the stage
+   * looks like; whether a config drawer happened to be open when you quit is
+   * not, and reopening on it would put a panel between the talent and their
+   * first take.
+   *
+   * It also DISPLACES rather than overlays — the opposite of the transcript
+   * drawer, and deliberately. The transcript is a skim surface you glance at
+   * mid-take, so it must not shove the driven zone away from the lens. The
+   * setup panel is used BETWEEN takes, and the whole point of it is watching
+   * the stage respond as you change values — which you cannot do through a
+   * panel sitting on top of the stage.
+   */
+  setupOpen: boolean;
+
   mirror: boolean;
   focus: boolean;
   text: TextPreset;
@@ -163,6 +180,7 @@ interface PrompterState {
   stepPrev: () => void;
   selectScript: (scriptId: string) => void;
   goToNextScript: () => void;
+  goToPrevScript: () => void;
   selectTranscript: (transcriptId: string) => void;
   selectStyle: (style: TriggerStyle) => void;
   toggleZone: (zone: RecordingZone) => void;
@@ -170,6 +188,8 @@ interface PrompterState {
   setCamera: (side: CameraSide) => void;
   resizeZones: (left: RecordingZone, right: RecordingZone, deltaPx: number) => void;
   toggleTranscript: () => void;
+  toggleSetup: () => void;
+  closeSetup: () => void;
   toggleMirror: () => void;
   toggleFocus: () => void;
   setText: (preset: TextPreset) => void;
@@ -230,6 +250,7 @@ export const useProm = create<PrompterState>((set, get) => ({
   ...cloneLayout(DEFAULT_LAYOUT),
   transcriptOpen: false,
   transcriptEdge: edgeFor(DEFAULT_LAYOUT.camera),
+  setupOpen: false,
 
   rigs: [],
   rigId: null,
@@ -374,6 +395,18 @@ export const useProm = create<PrompterState>((set, get) => ({
   },
 
   /**
+   * The strip's stepper walks scripts; the arrows still walk BEATS.
+   *
+   * Two different scales on two different controls, which is the prior-art rule
+   * rather than an exception to it — the thing that must never happen is one
+   * key meaning a beat sometimes and a whole script other times.
+   */
+  goToPrevScript: () => {
+    const previous = prevScript(get());
+    if (previous) get().selectScript(previous.id);
+  },
+
+  /**
    * Switching corpus — provenance ↔ cadence — RESETS the beat, and says nothing.
    *
    * It carried a cue card until David used it: "the overlay kicking in just
@@ -475,6 +508,8 @@ export const useProm = create<PrompterState>((set, get) => ({
   },
 
   toggleTranscript: () => set((s) => ({ transcriptOpen: !s.transcriptOpen })),
+  toggleSetup: () => set((s) => ({ setupOpen: !s.setupOpen })),
+  closeSetup: () => set({ setupOpen: false }),
   toggleMirror: () => set((s) => ({ mirror: !s.mirror })),
   toggleFocus: () => set((s) => ({ focus: !s.focus })),
   setText: (preset) => set({ text: preset }),
@@ -712,6 +747,21 @@ export const nextScript = (s: PrompterState): Script | undefined => {
   const index = s.set.scripts.findIndex((script) => script.id === s.scriptId);
   return index < 0 ? undefined : s.set.scripts[index + 1];
 };
+
+export const prevScript = (s: PrompterState): Script | undefined => {
+  if (!s.set || !s.scriptId) return undefined;
+  const index = s.set.scripts.findIndex((script) => script.id === s.scriptId);
+  return index <= 0 ? undefined : s.set.scripts[index - 1];
+};
+
+/**
+ * Which edge the setup panel enters from: the one FURTHEST from the lens.
+ *
+ * Same rule the transcript drawer follows, and for the same reason — a panel
+ * between the talent and the driven zone is the failure mode, whichever panel
+ * it is.
+ */
+export const setupEdge = (s: PrompterState): CameraSide => edgeFor(s.camera);
 
 /**
  * **Layout is subordinate to camera position** (requirements §2) — the one

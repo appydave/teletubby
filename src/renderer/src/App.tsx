@@ -4,9 +4,6 @@ import type { ScriptSet, TriggerStyle } from '@shared/domain';
 import { TRIGGER_STYLE_LETTER } from '@shared/domain';
 import type { Rig, Workspace } from '@shared/rig';
 import {
-  CAMERA_SIDES,
-  RECORDING_SET,
-  TEXT_PRESETS,
   ZONE_LABEL,
   activeTriggers,
   currentMajor,
@@ -17,11 +14,12 @@ import {
   currentScript,
   currentTranscript,
   layoutOf,
+  nextScript,
+  prevScript,
   rankOf,
   useProm,
   zoneOrder,
   type RecordingZone,
-  type TextPreset,
 } from './store';
 import {
   MajorZone,
@@ -30,18 +28,11 @@ import {
   TranscriptDrawer,
   TriggerZone,
 } from './components/Zones';
-import { Chip, Group } from './components/Controls';
-import RigAdmin from './components/RigAdmin';
-import RigBar from './components/RigBar';
+import { Chip } from './components/Controls';
+import SetupPanel from './components/SetupPanel';
 import CueOverlay from './components/CueOverlay';
 import Divider from './components/Divider';
 import CadencePanel from './components/CadencePanel';
-
-const PRESET_LABEL: Record<TextPreset, string> = {
-  standard: 'Standard',
-  large: 'Large',
-  stage: 'Stage',
-};
 
 /**
  * How long the arrangement has to hold still before it is written down.
@@ -154,13 +145,6 @@ function Waiting({ message, failed }: { message: string; failed?: boolean }): JS
 
 function Stage(): JSX.Element {
   const [cadenceOpen, setCadenceOpen] = useState(false);
-  /**
-   * The tuning controls start open only on a machine that has never run this —
-   * there the talent has an arrangement to build. Every launch after that they
-   * already have one, and four rows of chips they will not touch is exactly the
-   * screen-attention the North Star test rules out.
-   */
-  const [tuneOpen, setTuneOpen] = useState(() => !useProm.getState().restoredLayout);
   const script = useProm(currentScript);
   const transcript = useProm(currentTranscript);
   const paragraph = useProm(currentParagraph);
@@ -189,18 +173,29 @@ function Stage(): JSX.Element {
   const rigId = useProm((s) => s.rigId);
   const rigsLoaded = useProm((s) => s.rigsLoaded);
 
-  const selectScript = useProm((s) => s.selectScript);
   const selectTranscript = useProm((s) => s.selectTranscript);
   const selectStyle = useProm((s) => s.selectStyle);
-  const toggleZone = useProm((s) => s.toggleZone);
-  const setDriven = useProm((s) => s.setDriven);
-  const setCamera = useProm((s) => s.setCamera);
   const toggleTranscript = useProm((s) => s.toggleTranscript);
   const toggleMirror = useProm((s) => s.toggleMirror);
   const toggleFocus = useProm((s) => s.toggleFocus);
-  const setText = useProm((s) => s.setText);
   const stepNext = useProm((s) => s.stepNext);
   const stepPrev = useProm((s) => s.stepPrev);
+  const toggleSetup = useProm((s) => s.toggleSetup);
+  const closeSetup = useProm((s) => s.closeSetup);
+  const setupOpen = useProm((s) => s.setupOpen);
+  const goToNextScript = useProm((s) => s.goToNextScript);
+  const goToPrevScript = useProm((s) => s.goToPrevScript);
+  const hasNext = useProm((st) => nextScript(st) !== undefined);
+  const hasPrev = useProm((st) => prevScript(st) !== undefined);
+
+  /**
+   * On a machine that has never run this there is an arrangement to build, so
+   * the panel opens itself once. Every launch after that the workspace has one
+   * already, and a panel in the way is the opposite of what rigs bought.
+   */
+  useEffect(() => {
+    if (!useProm.getState().restoredLayout) useProm.setState({ setupOpen: true });
+  }, []);
 
   // The text preset is a root-level data attribute so one CSS variable rescales
   // every zone at once.
@@ -264,6 +259,17 @@ function Stage(): JSX.Element {
         case 'T':
           toggleTranscript();
           break;
+        // A bare letter, like every other key here. No modifier: ⌘K was drawn
+        // in the mock, but every binding this app has is a single unmodified
+        // letter, and a modifier chord would be the odd one out — and would
+        // collide with a command palette the day one arrives.
+        case 's':
+        case 'S':
+          toggleSetup();
+          break;
+        case 'Escape':
+          closeSetup();
+          break;
         case 'd':
         case 'D':
           toggleFocus();
@@ -282,7 +288,7 @@ function Stage(): JSX.Element {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stepNext, stepPrev, toggleTranscript, toggleFocus, toggleMirror]);
+  }, [stepNext, stepPrev, toggleTranscript, toggleFocus, toggleMirror, toggleSetup, closeSetup]);
 
   if (!script || !transcript || !set) return <Waiting message="No script selected." />;
 
@@ -319,36 +325,44 @@ function Stage(): JSX.Element {
           </span>
         </div>
 
-        {/* Script selection — click only. */}
-        <div className="flex flex-wrap gap-1.5 px-5 py-3">
-          {set.scripts.map((s) => (
-            <Chip
-              key={s.id}
-              on={s.id === script.id}
-              onClick={() => selectScript(s.id)}
-              title={s.title}
-              mono
-            >
-              {String(s.n).padStart(2, '0')}
-            </Chip>
-          ))}
-          <span className="ml-3 self-center font-display text-sm uppercase tracking-wide text-ink">
-            {String(script.n).padStart(2, '0')} · {script.title}
+        {/* ONE STRIP — only what changes DURING a take.
+            Six rows used to sit here and eat roughly a third of the window
+            before a word of script appeared. Everything that BUILDS an
+            arrangement moved into the setup panel; what is left is where you
+            are, which corpus, which style, and the way in. */}
+        <div className="tt-no-drag flex items-center gap-3.5 px-5 pb-2">
+          {/* The stepper walks to the NEIGHBOURING script. Jumping to 07 is what
+              the grid in the setup panel is for. Both are clamped by the store,
+              so neither can roll off the end of the set. */}
+          <div className="flex items-center gap-1">
+            <StepButton label="Previous script" disabled={!hasPrev} onClick={goToPrevScript}>
+              ◀
+            </StepButton>
+            <span className="rounded bg-driven px-1.5 font-mono text-xs text-ink">
+              {String(script.n).padStart(2, '0')}
+            </span>
+            <StepButton label="Next script" disabled={!hasNext} onClick={goToNextScript}>
+              ▶
+            </StepButton>
+          </div>
+          <span className="truncate font-display text-sm uppercase tracking-wide text-ink">
+            {script.title}
           </span>
-        </div>
 
-        {/* Corpus + trigger style — the two axes of the experiment. */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge px-5 py-2">
-          <Group label="Corpus">
+          <span className="h-4 w-px shrink-0 bg-edge" />
+
+          {/* Corpus and style STAY on the strip and stay live while the panel is
+              open. They are the two axes of the A/B/C experiment and the talent
+              flips them mid-session — putting them behind a gesture was the
+              flaw that nearly disqualified this direction. */}
+          <div className="flex shrink-0 gap-1.5">
             {script.transcripts.map((t) => (
               <Chip key={t.id} on={t.id === transcript.id} onClick={() => selectTranscript(t.id)}>
-                {t.kind === 'provenance' ? 'Provenance' : 'Cadence'}
-                <span className="ml-1.5 font-mono text-[0.6rem] opacity-70">{t.corpus}</span>
+                {t.corpus}
               </Chip>
             ))}
-          </Group>
-
-          <Group label="Style">
+          </div>
+          <div className="flex shrink-0 gap-1.5">
             {(['near-verbatim', 'compressed-concept', 'loose-keywords'] as TriggerStyle[]).map(
               (candidate) => {
                 const has = transcript.triggerSets.some((t) => t.style === candidate);
@@ -365,85 +379,40 @@ function Stage(): JSX.Element {
                 );
               },
             )}
-          </Group>
-        </div>
-
-        {/* Which arrangement. One row, and the only one that matters before a take. */}
-        <RigBar onOpenTune={() => setTuneOpen((open) => !open)} />
-
-        {/* Everything that BUILDS an arrangement, folded away once you have one.
-            Zones, the driven zone, the camera edge and the text preset are all
-            decisions made before the camera runs — and rigs exist so they are
-            made once rather than before every take. */}
-        {tuneOpen && (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge bg-lane-alt px-5 py-2">
-            <Group label="Zones">
-              {RECORDING_SET.map((zone) => (
-                <Chip key={zone} on={visible.includes(zone)} onClick={() => toggleZone(zone)}>
-                  {ZONE_LABEL[zone]}
-                </Chip>
-              ))}
-            </Group>
-
-            <Group label="Driving">
-              {RECORDING_SET.map((zone) => (
-                <Chip
-                  key={zone}
-                  on={driven === zone}
-                  disabled={!visible.includes(zone)}
-                  onClick={() => setDriven(zone)}
-                >
-                  {ZONE_LABEL[zone]}
-                </Chip>
-              ))}
-            </Group>
-
-            <Group label="Camera">
-              {CAMERA_SIDES.map((side) => (
-                <Chip key={side} on={camera === side} onClick={() => setCamera(side)}>
-                  {side === 'left' ? '◀ Left' : 'Right ▶'}
-                </Chip>
-              ))}
-            </Group>
-
-            <Group label="Text">
-              {TEXT_PRESETS.map((preset) => (
-                <Chip key={preset} on={text === preset} onClick={() => setText(preset)}>
-                  {PRESET_LABEL[preset]}
-                </Chip>
-              ))}
-            </Group>
-
-            <div className="flex w-full items-center gap-3 border-t border-edge pt-2">
-              <RigAdmin />
-            </div>
           </div>
-        )}
 
-        {/* Presentation — the toggles with keys on them, always reachable. */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-edge px-5 py-2">
+          <span className="h-4 w-px shrink-0 bg-edge" />
+
           <Chip on={cadenceOpen} onClick={() => setCadenceOpen((open) => !open)}>
             Cadence
           </Chip>
-          <Chip on={transcriptOpen} onClick={toggleTranscript}>
-            Transcript <span className="font-mono text-[0.65rem] opacity-60">T</span>
-          </Chip>
-          <Chip on={mirror} onClick={toggleMirror}>
-            Mirror <span className="font-mono text-[0.65rem] opacity-60">M</span>
-          </Chip>
-          <Chip on={focus} onClick={toggleFocus}>
-            Focus <span className="font-mono text-[0.65rem] opacity-60">D</span>
-          </Chip>
 
-          <span className="ml-auto font-mono text-[0.7rem] text-muted">
+          <span className="ml-auto shrink-0 font-mono text-[0.7rem] text-muted">
             ↑ ↓ space step · T transcript · F fullscreen
           </span>
+
+          <Chip on={setupOpen} onClick={toggleSetup}>
+            Setup <span className="font-mono text-[0.65rem] opacity-60">S</span>
+          </Chip>
         </div>
       </header>
 
       {/* ---------------- stage: mirrorable ---------------- */}
-      <main className="relative flex-1 overflow-hidden">
-        <div className={['flex h-full', mirror ? 'tt-mirror' : ''].join(' ')}>
+      <main className="relative flex flex-1 overflow-hidden">
+        {/* The setup panel is a FLEX SIBLING of the lanes, not a layer over
+            them: it takes width and the lanes give it back, so the stage stays
+            lit and the talent can watch it respond as they change values.
+
+            ⚠️ It sits OUTSIDE `.tt-mirror` on purpose. Mirror mode flips the
+            stage for prompter glass; chrome must stay readable, and a mirrored
+            control panel is unusable.
+
+            ⚠️ Nothing here writes `weights`. The lanes narrow because a sibling
+            took width and they spring back when it closes — lane widths are a
+            saved rig property, and a panel that rebalanced them would rewrite
+            the talent's rig every time it opened. */}
+        <SetupPanel />
+        <div className={['flex h-full min-w-0 flex-1', mirror ? 'tt-mirror' : ''].join(' ')}>
           {order.map((zone, i) => (
             <Fragment key={zone}>
               {i > 0 && <Divider onResize={(dx) => resizeZones(order[i - 1], zone, dx)} />}
@@ -492,10 +461,42 @@ function Stage(): JSX.Element {
 
       <footer className="shrink-0 border-t border-edge bg-panel px-5 py-1.5">
         <span className="font-mono text-[0.7rem] text-muted">
-          beat {triggers.length === 0 ? 0 : step + 1}/{triggers.length} · {transcript.corpus} ·
-          driving {ZONE_LABEL[driven]} · lens {camera} · {script.takeaway}
+          {set.title} · beat {triggers.length === 0 ? 0 : step + 1}/{triggers.length} ·{' '}
+          {transcript.corpus} · driving {ZONE_LABEL[driven]} · lens {camera} · {script.takeaway}
         </span>
       </footer>
     </div>
+  );
+}
+
+/**
+ * A stepper arrow. Disabled at the ends of the set rather than wrapping —
+ * rolling from script 12 back to 01 is the silent-advance bug the prior-art
+ * rule exists to prevent, one level up.
+ */
+function StepButton({
+  label,
+  disabled,
+  onClick,
+  children,
+}: {
+  label: string;
+  disabled: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={[
+        'rounded px-1 text-[0.6rem] text-muted transition',
+        disabled ? 'cursor-not-allowed opacity-25' : 'hover:text-ink',
+      ].join(' ')}
+    >
+      {children}
+    </button>
   );
 }

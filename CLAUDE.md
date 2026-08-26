@@ -80,9 +80,46 @@ attribution to a rig that no longer exists is cleared. Both the core and the
 store enforce that, because either one alone would leave the other free to move
 the talent.
 
-The tuning controls (zones · driving · camera · text · rename · remove) fold
-into a drawer that starts shut once a layout has been restored. Everything in it
-BUILDS an arrangement, and that is a before-the-take decision.
+### The setup panel — one strip, and everything else slides out
+
+The toolbar was six stacked rows eating roughly a third of the window before a
+word of script appeared. Now there is **one strip** carrying only what changes
+DURING a take — where you are, the corpus, the style, Cadence — and everything
+that BUILDS an arrangement lives in a **setup panel** on `S`.
+
+Four properties are the design, not decoration:
+
+1. **It is not a modal.** No scrim, no dim, nothing covered. The point of it is
+   watching the stage respond as you change values; a veil defeats the only
+   thing it is for.
+2. **It DISPLACES rather than overlays.** The lanes give up width and keep
+   rendering. That is the *opposite* of the transcript drawer's ruling, and
+   deliberately: the transcript is glanced at mid-take and must not shove the
+   driven zone away from the lens, while this is used between takes.
+3. **It enters from the edge FURTHEST from the lens** — same rule as
+   `transcriptEdge`. A panel between the talent and the driven zone is the
+   failure mode, whichever panel it is.
+4. **Corpus and style stay on the strip**, live, while the panel is open. They
+   are the axes of the A/B/C experiment and get flipped mid-session; putting
+   them behind a gesture nearly disqualified this whole direction.
+
+⚠️ **The panel must never write the lane weights.** They narrow because a flex
+sibling took width and spring back when it closes. Lane widths are a saved rig
+property, so a panel that "helpfully" rebalanced them would rewrite the talent's
+rig every time it opened.
+
+⚠️ **`setupOpen` is not part of a rig and is not remembered.** A rig is what the
+stage looks like; whether a config drawer happened to be open when you quit is
+not, and reopening on it would put a panel between the talent and their first
+take. It opens itself once, on a machine that has never run the app.
+
+The key is a bare `S`, with `Escape` to close. The mock drew ⌘K; every binding
+this app has is a single unmodified letter, and a chord would be the odd one out
+— and would collide with a command palette the day one arrives.
+
+The script chips moved into the panel; the strip has a **stepper** for the
+neighbouring script, disabled at both ends rather than wrapping. Rolling from 12
+back to 01 is the silent-advance bug of rule 1, one level up.
 
 ⚠️ **Nothing is remembered until something has been recalled** (`rigsLoaded`).
 The app writes the live layout back on every change, so a failed `list_rigs`
@@ -166,7 +203,7 @@ The app must be running — the surface lives in its process. Port and token com
 ```bash
 npm install        # npm ONLY — packageManager is pinned; pnpm blocks Electron's postinstall
 npm run dev        # Electron app; renderer on 7110, control API on 7111 (registered slots)
-npm test           # 273 tests
+npm test           # 285 tests
 npm run typecheck
 ```
 
