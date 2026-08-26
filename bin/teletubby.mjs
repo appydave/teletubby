@@ -108,6 +108,13 @@ const USAGE = `teletubby — drive the running Teletubby app
   capabilities                 Every verb this surface exposes, with its contract
   call <capability> [--input <json>] [--idempotency-key <key>]
 
+  Input ALWAYS goes in --input. A bare JSON positional is refused, not ignored.
+    teletubby call get_script --input '{"scriptId":"kybernesis-phase-1/01"}'
+
+  "capabilities" is the authority on what exists — it is generated from the
+  same catalog the gate enforces, so it cannot drift from the app. It does not
+  yet publish per-verb INPUT shapes; until it does, read src/core/handlers.ts.
+
 Environment:
   TELETUBBY_URL           default http://127.0.0.1:${DEFAULT_PORT}
   TELETUBBY_TOKEN         default: read from the running app's control.json
@@ -141,6 +148,28 @@ switch (command) {
   case 'call': {
     const capability = rest[0];
     if (!capability) die(`Which capability? Run "teletubby capabilities" to list them.`);
+
+    /*
+     * ⚠️ REFUSE A STRAY POSITIONAL RATHER THAN DROPPING IT.
+     *
+     * The input goes in `--input`, and a bare `teletubby call get_set '{...}'`
+     * used to be parsed as a second positional and silently discarded. The call
+     * then came back `not_found: no set specified` — which reads exactly like
+     * "that set does not exist", so the caller goes looking for missing data
+     * instead of for their own vanished argument. Absence and failure must
+     * never look the same. This already cost one session real time.
+     */
+    const stray = rest.slice(1);
+    if (stray.length) {
+      const looksLikeJson = stray[0].trimStart().startsWith('{');
+      die(
+        `Unexpected argument ${JSON.stringify(stray[0])} after "${capability}".` +
+          (looksLikeJson
+            ? `\n\nInput goes in --input, or it is ignored:\n  teletubby call ${capability} --input '${stray[0]}'`
+            : `\n\n${USAGE}`),
+      );
+    }
+
     let input = {};
     if (flags.input) {
       try {

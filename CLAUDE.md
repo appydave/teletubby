@@ -294,10 +294,31 @@ act, and only for the exact input that was approved.
 
 ```bash
 teletubby health           # is the app up? (no token needed)
-teletubby capabilities     # every verb, with its contract
-teletubby call get_set
+teletubby capabilities     # every verb, with its contract — GENERATED from the catalog
 teletubby call list_rigs   # saved arrangements + the workspace
+teletubby call get_set --input '{"setId":"kybernesis-phase-1","full":true}'
 ```
+
+⚠️ **Input ALWAYS goes in `--input`.** A bare positional JSON used to be parsed as a
+second positional and silently dropped, and the call then returned
+`not_found: no set specified` — which reads like *that set does not exist*, so you go
+hunting for missing data instead of your own vanished argument. The CLI now **refuses**
+a stray positional and names the right form. Absence and failure must never look alike.
+
+⚠️ **`capabilities` is the authority; this file is not.** It is generated from
+`src/shared/capabilities.ts` — the same catalog the gate enforces and
+`test/capability-surface.test.ts` pins — so it cannot drift from the app. Prose here
+can, and just did.
+
+⚠️ **What `capabilities` does NOT yet publish: per-verb INPUT shapes.** It returns
+`kind`, `sideEffects`, `principals`, `idempotent`, `confirmationRequired`,
+`supportsDryRun`, `announces` and `failureModes` — everything about *how* a verb
+behaves and nothing about *what fields it takes*. So an agent can discover that
+`get_script` exists and is a read-only query, then has to guess `scriptId` or read
+`src/core/handlers.ts`. The Zod schemas in `domain-schema.ts` validate domain OBJECTS
+(a set, a rig, a talent), not the verb's input envelope, so there is nothing to derive
+this from today — it has to be authored per verb and published. That is the real fix,
+and it is the first thing that makes this surface self-teaching.
 
 The app must be running — the surface lives in its process. Port and token come from
 `~/Library/Application Support/teletubby/control.json`, written per launch.
