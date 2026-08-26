@@ -222,13 +222,37 @@ same rule applies here. Widening the paragraph lane to ~65 characters per line w
 take paragraph 3 from 11 lines to about 6 — but it comes straight out of the trigger
 lane, and column 2 is the product.
 
-### Camera direction — above / above-left is NOT built
+### The hot zone — the camera is NOT on an edge
 
-`camera` is still two edges. `docs/camera-direction.md` is the written proposal, with
-the recommendation: widen it to a *position* (`{x, y}`) and derive lane order, panel
-entry edge and the reading line from it — and specifically **do not** stack the lanes
-vertically for a top lens, because that puts the followers further from it than side by
-side does. Read that before changing `CAMERA_SIDES`.
+`camera` is still two edges, and that is wrong in kind, not in coverage. The camera is a
+physical object on a **vertical pole**, about an inch in front of the screen, free to
+move in two axes, and it **occludes a strip of the display**. So the thing to model is
+not *where the camera is* — it is **where the hot zone sits in relation to it**: the
+~10cm-wide region that must fall inside the sight line to the lens.
+
+⚠️ **Rows vs columns is DERIVED and must never be asked.** A vertical pole blocks a
+vertical strip. With columns that eats a sliver of ONE lane and the layout has somewhere
+to put it; with rows it eats every row at the same x and there is nowhere to move it to.
+Columns, permanently, at any camera height.
+
+⚠️ **Occlusion is acceptable, not a bug.** Today the body clips a couple of letters off
+each line and David reads through it. Prefer to keep load-bearing text out of the strip;
+never contort the layout to guarantee zero occlusion.
+
+⚠️ **The app cannot know centimetres.** Electron gives DIPs and a scale factor, never
+physical size. A hot zone in cm has to arrive as a screen fraction the talent sets. On
+David's 32" display, 36.2 px/cm — 10cm is 362px, 14.1% of the width.
+
+The reclaimed state is not replaced by this: it is the right answer for today's camera
+height reached by hand, and generalises to **the reading line tracks `lens.y`**.
+
+Also recorded there, not acted on: **four zones is too many**. One lane is already 1.8×
+wider than the hot zone, so every zone but the driven one is outside the sight line by
+construction — a look-away surface, not a glance surface.
+
+Full proposal, with the next step (a single `hotZone()` derivation seam, no behaviour
+change, no rig change): **[docs/camera-direction.md](docs/camera-direction.md)**. Read it
+before touching `CAMERA_SIDES`.
 
 ### Live edits reach the window — the loop this app exists for
 
