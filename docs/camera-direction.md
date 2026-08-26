@@ -104,7 +104,7 @@ be sufficient. It already delivered the thing camera-above actually demanded:
 | driven zone | before | after (reclaimed) |
 |---|---|---|
 | paragraph | 167px / 4.6cm | 40px / 1.1cm |
-| triggers, beat 1 | 336px / 9.3cm | 41px / 1.1cm |
+| triggers, beat 1 | 336px / 9.3cm | 53px / 1.5cm |
 
 What it does **not** fix: the setup panel and the transcript drawer still choose their
 edge from a horizontal rule that has no meaning for a top lens, and the footer strip is

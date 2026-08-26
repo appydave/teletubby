@@ -154,7 +154,9 @@ Two moves, and they are different in kind:
    What is left at the top is a **24px drag rail**. Nobody's eyes travel *below* the
    script on the way to a lens above it, so the strip costs nothing down there.
 2. **`D` — the reclaimed state.** Lane padding collapses, the zone-label row hides,
-   and the reading line moves to the top. First word at **40px · 1.1cm**.
+   and the reading line moves to the top. First word at **40px · 1.1cm** with the
+   paragraph driven, **53px · 1.5cm** with a list zone (its rows carry their own
+   `py-2`; the row's box starts at 32px).
 
 ⚠️ **24px is a measured floor, not a taste.** `titleBarStyle: 'hiddenInset'` makes
 macOS float the traffic lights over the page at logical y 10–22 whether or not the
