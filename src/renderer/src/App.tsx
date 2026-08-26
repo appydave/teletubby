@@ -133,7 +133,7 @@ export default function App(): JSX.Element {
 function Waiting({ message, failed }: { message: string; failed?: boolean }): JSX.Element {
   return (
     <div className="flex h-screen flex-col bg-canvas text-ink">
-      <div className="tt-drag h-6 shrink-0 border-b border-edge bg-panel" />
+      <div className="tt-drag h-7 shrink-0 border-b border-edge bg-panel" />
       <div className="flex flex-1 items-center justify-center px-10 text-center">
         <p className={['font-body text-script', failed ? 'text-ink' : 'text-muted'].join(' ')}>
           {message}
@@ -351,14 +351,19 @@ function Stage(): JSX.Element {
 
           The narrowest top band this window can have, and it is measured, not
           guessed. `titleBarStyle: 'hiddenInset'` makes macOS float the traffic
-          lights over the page whether or not the page draws anything up here —
-          measured at logical y 10-22. A rail shorter than 24px does not remove
-          them, it just puts them on top of the script.
+          lights over the page whether or not the page draws anything up here.
 
-          So 24px is the floor while the buttons exist. Below that needs
-          `setWindowButtonVisibility(false)` from the main process, which is a
-          real option and deliberately not taken here: losing close/minimise to
-          the mouse is a bigger surprise than 0.7cm is a win.
+          ⚠️ MEASURE THEM ON A FOCUSED WINDOW. Unfocused, the buttons render as
+          faint grey discs that a colour threshold clips at the edges — that is
+          how this rail first shipped at 24px with the lights spilling 1.5px
+          past the border. Focused, they are chromatic and span logical
+          y 13.0-24.5. The floor is 25px; the rail is 28px, which leaves 3.5px
+          under them.
+
+          Below the floor needs `setWindowButtonVisibility(false)` from the main
+          process, which is a real option and deliberately not taken: losing
+          close and minimise to the mouse is a bigger surprise than 0.7cm is a
+          win, and there is nothing this band is competing with.
 
           ⚠️ THIS IS THE ONLY DRAG REGION THE WINDOW HAS. `hiddenInset` means
           the page supplies it or the window cannot be moved at all. It holds
@@ -366,7 +371,7 @@ function Stage(): JSX.Element {
           and nothing that can collapse it away. Everything that was up here is
           in the footer now.
       */}
-      <div className="tt-drag h-6 shrink-0 border-b border-edge bg-panel" />
+      <div className="tt-drag h-7 shrink-0 border-b border-edge bg-panel" />
 
       {/* ---------------- stage: mirrorable ---------------- */}
       <main className="relative flex flex-1 overflow-hidden">

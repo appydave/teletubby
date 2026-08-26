@@ -85,7 +85,7 @@ lens" stops being a horizontal question and becomes a vertical one — and the w
 answer a vertical question is to raise the *reading line*, not to re-stack the lanes.
 Side-by-side lanes with a high reading line put **every** zone inside the same narrow
 band under the lens. That is what this session's reclaimed state already does, and it
-is why it made the paragraph-driven case go from 4.6cm to 1.1cm without moving a
+is why it made the paragraph-driven case go from 4.6cm to 1.2cm without moving a
 single lane.
 
 `x: 'centre'` earns its place here: with the lens above and centred, the driven zone
@@ -103,8 +103,8 @@ be sufficient. It already delivered the thing camera-above actually demanded:
 
 | driven zone | before | after (reclaimed) |
 |---|---|---|
-| paragraph | 167px / 4.6cm | 40px / 1.1cm |
-| triggers, beat 1 | 336px / 9.3cm | 53px / 1.5cm |
+| paragraph | 167px / 4.6cm | 44px / 1.2cm |
+| triggers, beat 1 | 336px / 9.3cm | 57px / 1.6cm |
 
 What it does **not** fix: the setup panel and the transcript drawer still choose their
 edge from a horizontal rule that has no meaning for a top lens, and the footer strip is
