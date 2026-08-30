@@ -351,10 +351,31 @@ The app must be running — the surface lives in its process. Port and token com
 
 ```bash
 npm install        # npm ONLY — packageManager is pinned; pnpm blocks Electron's postinstall
-npm run dev        # Electron app; renderer on 7110, control API on 7111 (registered slots)
-npm test           # 285 tests
+npm run app        # start DETACHED — renderer on 7110, control API on 7111 (registered slots)
+npm run app:status # is it up? (health, not a guess)
+npm run app:stop
+npm test           # 287 tests
 npm run typecheck
 ```
+
+⚠️ **An agent must never launch this with `npm run dev`.** That binds the Electron
+process to the session's process group, so quitting Claude Code prompts *"move to
+background"* and the prompter's lifetime is tied to a terminal David is closing.
+`npm run app` runs the same `npm run dev` under overmind, which supervises it in a
+tmux server that reparents to **launchd** — nothing in the launching session can take
+it down, and `npm run app:stop` is the only thing that does. `npm run dev` by hand in
+a terminal you intend to keep open is still fine.
+
+⚠️ **`overmind echo` hangs a session** — it follows the stream with no bound, and this
+machine has no `timeout`. The Procfile tees to `.logs/app.log` so a snapshot is
+possible: `bash scripts/app.sh tail`.
+
+⚠️ **`pgrep -f "electron-vite dev"` is ambiguous on this machine** — flicut runs the
+identical command line and answered first the one time it mattered. Scope it to
+`$PWD/node_modules/.bin/`.
+
+Full detail, including what does and does not prove the app is up:
+**`.claude/skills/teletubby/SKILL.md`** (`/teletubby`).
 
 ## The rules this app is built on
 

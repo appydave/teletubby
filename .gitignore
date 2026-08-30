@@ -7,3 +7,5 @@ out/
 dist/
 .vite/
 .handover/
+.overmind.sock
+.logs/

@@ -14,6 +14,11 @@
   "scripts": {
     "dev": "electron-vite dev",
     "start": "electron-vite preview",
+    "app": "bash scripts/app.sh start",
+    "app:stop": "bash scripts/app.sh stop",
+    "app:restart": "bash scripts/app.sh restart",
+    "app:status": "bash scripts/app.sh status",
+    "app:logs": "bash scripts/app.sh logs",
     "build": "electron-vite build",
     "build:data": "node scripts/build-scripts-data.mjs",
     "package": "electron-vite build && electron-builder",
