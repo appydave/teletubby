@@ -374,8 +374,19 @@ possible: `bash scripts/app.sh tail`.
 identical command line and answered first the one time it mattered. Scope it to
 `$PWD/node_modules/.bin/`.
 
-Full detail, including what does and does not prove the app is up:
-**`.claude/skills/teletubby/SKILL.md`** (`/teletubby`).
+Full detail — what does and does not prove the app is up, the detachment tree, and
+driving the control API — lives in the **`teletubby` skill**
+(`~/.claude/skills/teletubby/SKILL.md`, invoked as `/teletubby`).
+
+⚠️ **That skill is the single owner of launching this app, and it lives OUTSIDE the
+repo on purpose** — beside `flihub` and `flideck`, which are the same thing for their
+apps (FliHub already runs under overmind for the same reason). Do not add a repo-local
+`.claude/skills/teletubby/`; two skills answering "start teletubby" is the failure
+state, and that duplicate existed briefly in `9fd3a25`.
+
+⚠️ **An eve agent is ALSO called teletubby** (`~/dev/agents/teletubby` — *"an agent for
+column 2"*, untested, Arcana memory parked). It is owned by `fleet:manage-agents`, not
+by this repo. Starting the app and starting that agent are different acts.
 
 ## The rules this app is built on
 
