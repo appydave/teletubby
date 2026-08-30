@@ -366,12 +366,23 @@ function Stage(): JSX.Element {
           win, and there is nothing this band is competing with.
 
           ⚠️ THIS IS THE ONLY DRAG REGION THE WINDOW HAS. `hiddenInset` means
-          the page supplies it or the window cannot be moved at all. It holds
-          nothing, in any state, so there is nothing that can ever opt out of it
-          and nothing that can collapse it away. Everything that was up here is
-          in the footer now.
+          the page supplies it or the window cannot be moved at all. Nothing in
+          it may be clickable and nothing can collapse it away.
+
+          It carries ONE thing: the script title. Reviewing script 06 from the
+          chair, the title in the footer strip (14px, bottom-left) was
+          unreadable, and "which script am I on" is a glance at the start of a
+          take, not a thing read mid-take. 18px fits inside the 28px with zero
+          growth — the lights only occupy x 0–78 and the rest of the band was
+          empty. It is muted so it never competes with the driven marker, and
+          the rail sits outside `.tt-mirror` so it stays readable on glass.
+          Ruled 2026-08-30. Do NOT grow `h-7` for a bigger title.
       */}
-      <div className="tt-drag h-7 shrink-0 border-b border-edge bg-panel" />
+      <div className="tt-drag flex h-7 shrink-0 items-center border-b border-edge bg-panel">
+        <span className="truncate font-display text-[18px] uppercase leading-none tracking-wide text-muted">
+          {script.title}
+        </span>
+      </div>
 
       {/* ---------------- stage: mirrorable ---------------- */}
       <main className="relative flex flex-1 overflow-hidden">
