@@ -407,19 +407,24 @@ export const useProm = create<PrompterState>((set, get) => ({
   },
 
   /**
-   * Switching corpus — provenance ↔ cadence — RESETS the beat, and says nothing.
+   * Switching corpus — provenance ↔ cadence — KEEPS YOUR PLACE, and says nothing.
    *
    * It carried a cue card until David used it: "the overlay kicking in just
    * means I can't see a visual change in the text, so that's a feature you've
-   * added that doesn't help" (B437). He is right, and the rule was
-   * over-applied. A cue announces a boundary the talent CROSSED; switching
-   * corpus is an A/B comparison of the same content, and the card hides the
-   * exact difference you flipped over to see. Style switching never had one and
-   * he liked it: "very quick, nothing coming through."
+   * added that doesn't help" (B437). A cue announces a boundary the talent
+   * CROSSED; switching corpus is an A/B comparison of the same content, and the
+   * card hides the exact difference you flipped over to see. Still no card.
    *
-   * The beat still resets. A cadence transcript is a different document, not a
-   * translation — v02 re-cadences four of Tom's paragraphs into three, so no
-   * honest correspondence exists, and a wrong sync is worse than none.
+   * It used to RESET the beat as well, on the argument that a cadence
+   * transcript is a different document and "a wrong sync is worse than none".
+   * Then David A/B'd script 04 paragraph by paragraph and every flip dropped
+   * him to paragraph 1: "I can't just switch backwards and forwards and see
+   * them visually at the right location" (2026-08-30). The A/B toggle is the
+   * ONLY way he can judge a rewrite by eye, so a reset costs the exact
+   * comparison he flipped to make.
+   *
+   * The correspondence is by TOPIC, never by paragraph index — see
+   * `correspondingParagraphId` for the ragged-edge rules.
    */
   selectTranscript: (transcriptId) => {
     const state = get();
@@ -427,10 +432,23 @@ export const useProm = create<PrompterState>((set, get) => ({
     if (!script) return;
     const transcript = findTranscript(script, transcriptId);
     if (!transcript) return;
+
+    // Keep the style if the target has it, so the only variable that changes
+    // is the one the talent flipped.
+    const style =
+      state.style && findTriggerSet(transcript, state.style)
+        ? state.style
+        : defaultStyle(transcript);
+    const landing = correspondingParagraphId(
+      currentTranscript(state),
+      currentParagraphId(state),
+      transcript,
+    );
+    const triggers = style ? (findTriggerSet(transcript, style)?.triggers ?? []) : [];
     set({
       transcriptId: transcript.id,
-      style: defaultStyle(transcript),
-      step: 0,
+      style,
+      step: stepAtParagraph(transcript, triggers, landing),
     });
   },
 
@@ -697,6 +715,70 @@ const ownership = (transcript: Transcript): Map<string, { minor: string; major: 
       for (const paragraph of minor.paragraphs)
         map.set(paragraph.id, { minor: minor.id, major: major.id });
   return map;
+};
+
+/**
+ * Where paragraph `paragraphId` of `from` lands in `to` — the A/B switch.
+ *
+ * Paragraph ids are POSITIONAL (`p1`…`pN`) and mean nothing across corpora:
+ * v02 re-cadences four of Tom's paragraphs into three, so Tom's `p3` is the
+ * rewrite's `p2`. Topic ids are positional too, but over the AUTHORED grouping
+ * in `scripts/authored-domain.mjs` — and that grouping is the author's own
+ * claim about which of Tom's beats became which ("four become three" is
+ * written there, beside the text). So the honest correspondence is by topic:
+ * authored data in the sense rule 3 wants, never a proportion.
+ *
+ * The ragged edge, in order:
+ *   1. same MINOR topic exists in `to`  → its first paragraph
+ *   2. else same MAJOR topic exists     → its first paragraph (the minor was
+ *      folded into its neighbour — v02's t1.2 lands on t1.1, which is right)
+ *   3. else                             → the LAST paragraph of `to`
+ *
+ * Never paragraph 1 by default: a silent reset to the top is the bug this
+ * replaces, and it read as "the rewrite is missing" to the talent. Case 3
+ * lands at the END on purpose — the end card lights, which is a visible
+ * statement that the target has nowhere for this beat to go.
+ */
+export const correspondingParagraphId = (
+  from: Transcript | undefined,
+  paragraphId: string | null,
+  to: Transcript,
+): string | null => {
+  const all = paragraphsOf(to);
+  if (all.length === 0) return null;
+  const owner = from && paragraphId ? ownership(from).get(paragraphId) : undefined;
+  if (!owner) return all[0]?.id ?? null;
+
+  for (const major of to.topics)
+    for (const minor of major.minors)
+      if (minor.id === owner.minor && minor.paragraphs[0]) return minor.paragraphs[0].id;
+
+  const major = to.topics.find((m) => m.id === owner.major);
+  const first = major?.minors[0]?.paragraphs[0];
+  if (first) return first.id;
+  return all[all.length - 1]?.id ?? null;
+};
+
+/**
+ * The step in `triggers` that shows `paragraphId`: the first trigger mapped to
+ * it, else the last trigger mapped to a paragraph BEFORE it (a set need not
+ * cover every paragraph), else 0.
+ */
+const stepAtParagraph = (
+  transcript: Transcript,
+  triggers: { text: string; paragraphId: string }[],
+  paragraphId: string | null,
+): number => {
+  if (!paragraphId || triggers.length === 0) return 0;
+  const exact = triggers.findIndex((t) => t.paragraphId === paragraphId);
+  if (exact >= 0) return exact;
+  const order = paragraphsOf(transcript).map((p) => p.id);
+  const target = order.indexOf(paragraphId);
+  let best = 0;
+  triggers.forEach((t, i) => {
+    if (order.indexOf(t.paragraphId) <= target) best = i;
+  });
+  return best;
 };
 
 /**

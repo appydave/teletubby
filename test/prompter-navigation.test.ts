@@ -4,6 +4,7 @@ import { paragraphsOf, type ScriptSet } from '@shared/domain';
 import {
   RECORDING_SET,
   activeTriggers,
+  correspondingParagraphId,
   currentMajor,
   currentMinor,
   currentParagraph,
@@ -162,20 +163,74 @@ describe('every boundary crossing announces itself', () => {
     expect(s().scriptId).toBe(LAST_SCRIPT);
   });
 
-  it('resets the beat on a corpus change but stays SILENT about it', () => {
+  it('KEEPS the paragraph on a corpus change and stays SILENT about it', () => {
+    // David A/B'd script 04 paragraph by paragraph and every flip dropped him
+    // to paragraph 1 (2026-08-30). Paragraph 2 in Tom's must be the SAME TOPIC
+    // in the rewrite, or the comparison he flipped to make is lost.
     s().selectScript(SCRIPT_01);
     s().selectTranscript('tom-original');
-    s().stepNext();
+    useProm.setState({ visible: ['paragraph'], driven: 'paragraph' });
+    s().stepNext(); // one paragraph, because paragraph is driven (rule 1)
+    const tom = currentTranscript(s())!;
+    const from = currentParagraphId(s())!;
+    const minor = currentMinor(s())!.id;
+    expect(from).not.toBe('p1');
     useProm.setState({ cue: null });
-    s().selectTranscript('v01-rewrite');
 
-    // The beat resets: a cadence transcript is a different document, not a
-    // translation — v02 turns four of Tom's paragraphs into three, so there is
-    // no honest correspondence to carry across.
-    expect(s().step).toBe(0);
-    // But no cue. Switching corpus is an A/B comparison, and a card over the
-    // top hides the very difference the talent flipped across to see (B437).
+    s().selectTranscript('v01-rewrite');
+    const rewrite = currentTranscript(s())!;
+    expect(rewrite.corpus).toBe('v01-rewrite');
+    expect(currentParagraphId(s())).toBe(correspondingParagraphId(tom, from, rewrite));
+    expect(currentMinor(s())?.id).toBe(minor);
+    // No cue. Switching corpus is an A/B comparison, and a card over the top
+    // hides the very difference the talent flipped across to see (B437).
     expect(s().cue).toBeNull();
+
+    // And back again — still on the same beat, not the top.
+    s().selectTranscript('tom-original');
+    expect(currentParagraphId(s())).toBe(from);
+  });
+
+  it('maps by TOPIC at the ragged edge, never by paragraph index', () => {
+    // v02 re-cadences four of Tom's paragraphs into three: t1.1 + t1.2 fold
+    // into one. A flat index would put Tom's p3 (t2.1) on the rewrite's p3
+    // (t3.1) — a different topic, silently.
+    const script = KYBERNESIS_PHASE_1.scripts.find((x) => x.id === SCRIPT_02)!;
+    const tom = script.transcripts.find((t) => t.corpus === 'tom-original')!;
+    const rewrite = script.transcripts.find((t) => t.corpus === 'v02-rewrite')!;
+    expect(paragraphsOf(tom).length).toBe(4);
+    expect(paragraphsOf(rewrite).length).toBe(3);
+
+    expect(correspondingParagraphId(tom, 'p1', rewrite)).toBe('p1'); // t1.1 → t1.1
+    expect(correspondingParagraphId(tom, 'p2', rewrite)).toBe('p1'); // t1.2 folded → major t1
+    expect(correspondingParagraphId(tom, 'p3', rewrite)).toBe('p2'); // t2.1 → t2.1
+    expect(correspondingParagraphId(tom, 'p4', rewrite)).toBe('p3'); // t3.1 → t3.1
+    // And back: the rewrite's p2 is Tom's p3, not Tom's p2.
+    expect(correspondingParagraphId(rewrite, 'p2', tom)).toBe('p3');
+  });
+
+  it('lands on the LAST paragraph — visibly, the end card — when no topic matches', () => {
+    const script = KYBERNESIS_PHASE_1.scripts.find((x) => x.id === SCRIPT_02)!;
+    const tom = script.transcripts.find((t) => t.corpus === 'tom-original')!;
+    const alien: typeof tom = {
+      ...tom,
+      id: 'alien',
+      corpus: 'alien',
+      topics: [
+        {
+          id: 'zz',
+          heading: 'Elsewhere',
+          minors: [
+            { id: 'zz.1', heading: 'a', paragraphs: [{ id: 'q1', text: 'one' }] },
+            { id: 'zz.2', heading: 'b', paragraphs: [{ id: 'q2', text: 'two' }] },
+          ],
+        },
+      ],
+    };
+    // Not paragraph 1: a silent reset to the top is the bug this replaces.
+    expect(correspondingParagraphId(tom, 'p3', alien)).toBe('q2');
+    // No origin at all → the top, honestly.
+    expect(correspondingParagraphId(undefined, null, alien)).toBe('q1');
   });
 });
 
