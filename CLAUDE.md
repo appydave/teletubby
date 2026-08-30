@@ -504,6 +504,16 @@ quoted verbatim in the prior-art doc. Treat it as the reference point for the tr
 experiment, **not** as a settled rule — see `docs/open-questions.md` Q1, which is still the
 blocking unknown for this whole product.
 
+## Capture what you learn — `docs/kdd/`, via Lisa
+
+**Every session that fixes a bug, reverses a documented decision, or finds a check that was not
+checking anything captures it in `docs/kdd/` with `appydave:lisa` — one item at a time, dedup
+first, bump rather than mint.** Not `lexi`; that is the brains librarian. The KDD was seeded on
+2026-08-19 and then nothing was added for eleven days, not from forgetfulness but because nothing
+in this fleet fires it: no hook, and this file only ever *pointed* at it. This line is the backstop
+for when David forgets to ask (ruled 2026-08-30). Docs-only changes in this repo — this file,
+`README`, `docs/kdd/` — ship on the session's own judgement and are reported in past tense.
+
 ## Gotchas
 
 - **A Zustand selector that builds an array blanks the window.** `useProm(zoneOrder)` re-renders

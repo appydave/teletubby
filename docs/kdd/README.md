@@ -14,6 +14,10 @@ earns promotion to a **pattern** (none yet — promotion needs recurrence, not e
 ⚠️ **One candidate is now at the bar**: three learnings below describe the SAME shape — the
 renderer failing with no error anywhere (Tailwind `var()` opacity, `hiddenInset`, the Zustand
 selector). Left for Lisa to rule on rather than self-promoted.
+
+⚠️ **A second candidate reached the bar on 2026-08-30**: *absence rendering as success* —
+three instances (cadence rule 6, the unauthored trigger set, the dropped CLI argument), logged as
+one learning with `recurrence: 3` rather than three. Promotion is David's call.
 **Decisions** are ADRs.
 
 Curated by Lisa (`appydave:lisa`). Capture one item at a time, reconcile before writing, never mint
@@ -33,6 +37,9 @@ Seeded 2026-08-19 from the first build session. Every entry below was paid for t
 | [A JSON round-trip rewrites the whole file](learnings/a-json-round-trip-rewrites-the-whole-file.md) | tooling | medium | One entry added to a shared config produced 22 lines of phantom diff — in both escaping directions. Insert as text, not as a dump. |
 | [An artifact URL is not durable storage](learnings/an-artifact-url-is-not-durable-storage.md) | process | high | The only working prior art was lost: never committed, URL now 404s. The one bullet set that survived did so because it had been **quoted** into a committed doc. |
 | [A Zustand selector that builds an array blanks the window](learnings/a-zustand-selector-that-builds-an-array-blanks-the-window.md) | frontend | high | Build clean, typecheck clean, 151 tests green — and the window painted nothing. A new array per call re-renders forever and React tears the tree down, silently. |
+| [Correspondence between versions is by authored structure, never index](learnings/correspondence-between-versions-is-by-authored-structure-never-index.md) | domain | high | Flipping Tom ↔ rewrite reset to paragraph 1 because "no honest correspondence exists". It does — the authored topic grouping — and the ragged edge lands on the END, visibly, never the top. (2026-08-30) |
+| [Absence rendering as success](learnings/absence-rendering-as-success.md) | correctness | high | Rule 6 passed on an empty term list; an unauthored trigger set lit the end card; a dropped CLI argument said *not found*. **Recurrence 3 — at the promotion bar, human to rule.** (2026-08-30) |
+| [An occluded Electron window cannot be screenshotted for proof](learnings/an-occluded-electron-window-cannot-be-screenshotted-for-proof.md) | tooling | medium | Identical pixels before and after an HMR that changed the page. Stale frame, failed render and nothing-to-change look the same; only a focused window or a human proves it. (2026-08-30) |
 
 ## Decisions
 
