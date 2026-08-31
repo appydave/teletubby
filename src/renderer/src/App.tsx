@@ -227,6 +227,7 @@ function Stage(): JSX.Element {
   const text = useProm((s) => s.text);
   const rigId = useProm((s) => s.rigId);
   const rigsLoaded = useProm((s) => s.rigsLoaded);
+  const freshTranscripts = useProm((s) => s.freshTranscripts);
 
   const selectTranscript = useProm((s) => s.selectTranscript);
   const selectStyle = useProm((s) => s.selectStyle);
@@ -630,11 +631,22 @@ function Stage(): JSX.Element {
               talent flips them mid-session, so they are never behind a gesture —
               not the setup panel's, and not the reclaimed state's either. */}
           <div className="flex shrink-0 gap-1.5">
-            {script.transcripts.map((t) => (
-              <Chip key={t.id} on={t.id === transcript.id} onClick={() => selectTranscript(t.id)}>
-                {t.corpus}
-              </Chip>
-            ))}
+            {/* A corpus that ARRIVED gets a pulsing yellow dot until it is
+                selected. David sat one click from v07-rewrite for an hour
+                believing it had not landed — the write path worked, the chip
+                just looked like every other grey chip. The dot must read from
+                across the room, which is the actual viewing distance. */}
+            {script.transcripts.map((t) => {
+              const arrived = (freshTranscripts[script.id] ?? []).includes(t.id);
+              return (
+                <Chip key={t.id} on={t.id === transcript.id} onClick={() => selectTranscript(t.id)}>
+                  {t.corpus}
+                  {arrived && (
+                    <span className="ml-1.5 inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-driven align-middle ring-1 ring-edge-strong" />
+                  )}
+                </Chip>
+              );
+            })}
           </div>
           <div className="flex shrink-0 gap-1.5">
             {(['near-verbatim', 'compressed-concept', 'loose-keywords'] as TriggerStyle[]).map(

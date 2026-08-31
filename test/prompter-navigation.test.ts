@@ -722,6 +722,43 @@ describe('a refresh must never move the talent', () => {
     expect(s().cue).toBeNull();
   });
 
+  it('marks a corpus that ARRIVES so absence and arrival cannot look alike', () => {
+    // David sat on TOM-ORIGINAL for an hour believing v07-rewrite had not
+    // landed; it was one click away as an unmarked grey chip. The swap stays
+    // silent; the fact of arrival must not.
+    const scriptId = s().scriptId!;
+    s().refresh(
+      edited((set) => {
+        const script = set.scripts.find((x) => x.id === scriptId)!;
+        script.transcripts.push({
+          ...JSON.parse(JSON.stringify(script.transcripts[0])),
+          id: 'v-new-rewrite',
+          corpus: 'v-new-rewrite',
+        });
+      }),
+    );
+    expect(s().freshTranscripts[scriptId]).toEqual(['v-new-rewrite']);
+
+    // Selecting it is what clears the mark.
+    s().selectTranscript('v-new-rewrite');
+    expect(s().freshTranscripts[scriptId]).toBeUndefined();
+  });
+
+  it('does NOT mark the transcript the talent is looking at', () => {
+    // Its changes are already in front of them — and selecting is what clears
+    // a mark, so a mark on the selected one could never clear.
+    const scriptId = s().scriptId!;
+    const transcriptId = s().transcriptId!;
+    s().refresh(
+      edited((set) => {
+        const script = set.scripts.find((x) => x.id === scriptId)!;
+        const mine = script.transcripts.find((t) => t.id === transcriptId)!;
+        mine.source = 'edited-under-their-eyes';
+      }),
+    );
+    expect(s().freshTranscripts[scriptId]).toBeUndefined();
+  });
+
   it('picks up an agent’s new trigger words at the same beat', () => {
     const step = s().step;
     s().refresh(

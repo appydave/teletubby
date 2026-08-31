@@ -178,6 +178,17 @@ interface PrompterState {
    * silently at the top (docs/kdd: absence must not render as something else).
    */
   pendingPosition: WorkspacePosition | null;
+  /**
+   * Transcripts that arrived or changed since the talent last looked at them —
+   * scriptId → transcriptIds. David sat on TOM-ORIGINAL for the best part of
+   * an hour believing v07-rewrite had not arrived while it sat one click away
+   * as a grey chip identical to every other grey chip ("I can't record because
+   * you can't get the damn transcripts where I need them", 2026-08-31). The
+   * data reached the window; the FACT OF ARRIVAL never reached the talent.
+   * Absence and arrival must not look alike — third instance of the family.
+   * Marks clear when the transcript is selected. Session state, not persisted.
+   */
+  freshTranscripts: Record<string, string[]>;
 
   cue: CueCard | null;
   /** Increments each time a step was refused at the boundary, to replay the nudge. */
@@ -266,6 +277,7 @@ export const useProm = create<PrompterState>((set, get) => ({
   rigsLoaded: false,
   restoredLayout: false,
   pendingPosition: null,
+  freshTranscripts: {},
 
   cue: null,
   nudge: 0,
@@ -313,6 +325,7 @@ export const useProm = create<PrompterState>((set, get) => ({
       style,
       step,
       pendingPosition: null,
+      freshTranscripts: {},
     });
   },
 
@@ -368,6 +381,31 @@ export const useProm = create<PrompterState>((set, get) => ({
      * at the END, card lit, visible. The index clamp survives solely as the
      * fallback for "there was no paragraph to keep".
      */
+    /**
+     * Mark what ARRIVED. The data swap is silent by design; the fact that
+     * something new landed must not be. A transcript that is new, or whose
+     * content changed while the talent was NOT looking at it, gets a mark the
+     * chip renders until it is selected. The one being displayed is exempt —
+     * its changes are already in front of them, and selecting is what clears
+     * a mark, so marking the selected one could never clear.
+     */
+    const freshTranscripts: Record<string, string[]> = { ...state.freshTranscripts };
+    for (const nextScript of scriptSet.scripts) {
+      const prior = state.set?.scripts.find((sc) => sc.id === nextScript.id);
+      const marks = new Set(freshTranscripts[nextScript.id] ?? []);
+      for (const candidate of nextScript.transcripts) {
+        const displayed =
+          nextScript.id === state.scriptId && candidate.id === state.transcriptId;
+        const old = prior?.transcripts.find((o) => o.id === candidate.id);
+        if (!displayed && (!old || JSON.stringify(old) !== JSON.stringify(candidate)))
+          marks.add(candidate.id);
+      }
+      // A transcript that vanished sheds its mark with it.
+      const kept = [...marks].filter((id) => nextScript.transcripts.some((t) => t.id === id));
+      if (kept.length > 0) freshTranscripts[nextScript.id] = kept;
+      else delete freshTranscripts[nextScript.id];
+    }
+
     const from = currentTranscript(state);
     const fromParagraph = currentParagraphId(state);
     let step: number;
@@ -396,6 +434,7 @@ export const useProm = create<PrompterState>((set, get) => ({
       transcriptId: transcript?.id ?? null,
       style,
       step,
+      freshTranscripts,
       cue: moved
         ? {
             label: String(script.n).padStart(2, '0'),
@@ -521,10 +560,18 @@ export const useProm = create<PrompterState>((set, get) => ({
       transcript,
     );
     const triggers = style ? (findTriggerSet(transcript, style)?.triggers ?? []) : [];
+
+    // Looking at it is what clears the mark.
+    const freshTranscripts = { ...get().freshTranscripts };
+    const marks = (freshTranscripts[script.id] ?? []).filter((id) => id !== transcript.id);
+    if (marks.length > 0) freshTranscripts[script.id] = marks;
+    else delete freshTranscripts[script.id];
+
     set({
       transcriptId: transcript.id,
       style,
       step: stepAtParagraph(transcript, triggers, landing),
+      freshTranscripts,
     });
   },
 
