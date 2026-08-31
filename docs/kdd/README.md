@@ -41,6 +41,7 @@ Seeded 2026-08-19 from the first build session. Every entry below was paid for t
 | [Absence rendering as success](learnings/absence-rendering-as-success.md) | correctness | high | Rule 6 passed on an empty term list; an unauthored trigger set lit the end card; a dropped CLI argument said *not found*. **Recurrence 3 — at the promotion bar, human to rule.** (2026-08-30) |
 | [An occluded Electron window cannot be screenshotted for proof](learnings/an-occluded-electron-window-cannot-be-screenshotted-for-proof.md) | tooling | medium | Identical pixels before and after an HMR that changed the page. Stale frame, failed render and nothing-to-change look the same; only a focused window or a human proves it. (2026-08-30) |
 | [The store has no file watcher — safe only while writes go through the API](learnings/the-store-has-no-file-watcher-safe-only-while-writes-go-through-the-api.md) | architecture | medium | The running app never re-reads `teletubby.json`; live updates exist because `onChange` fires inside the writing process. One direct disk edit = silent divergence. A convention, not an enforcement. (2026-08-31) |
+| [A fix to a restore path can itself be a move](learnings/a-fix-to-a-restore-path-can-itself-be-a-move.md) | correctness | high | Re-seating to the paragraph's first trigger yanked the talent back three beats on every agent edit — drift caused by the anti-drift fix. Every restore needs a no-op path: is the current state already right? (2026-08-31) |
 
 ## Decisions
 
