@@ -308,9 +308,33 @@ function Stage(): JSX.Element {
    * track; with the zone model there is no single axis for them to mean, and a
    * key that means something different depending on the arrangement is exactly
    * the confusion the prior-art rule exists to prevent.
+   *
+   * ⌘← ⌘→ walk the SCRIPTS — the keyboard twin of the footer's ◀ ▶, asked for
+   * by name on the recording day ("I got 12 of them. I should be able to move
+   * backwards and forwards", 2026-08-31). Same store actions as the arrows, so
+   * one clamp rule: they STOP at 01 and 12, matching the footer's disabled
+   * state — the key that does nothing at the end is explained by the greyed
+   * arrow on screen. This is the one modifier chord in the app, and it is the
+   * exception that proves the bare-letter rule: bare ← → are unbindable here
+   * (see above), and ⌘-arrows is what "jump by a bigger unit" already means
+   * system-wide.
    */
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
+      // ⌘← / ⌘→ — but never inside an editable field, where they mean
+      // line-start / line-end and stealing them breaks text editing.
+      if (e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const target = e.target as HTMLElement | null;
+        if (
+          target &&
+          (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+        )
+          return;
+        e.preventDefault();
+        if (e.key === 'ArrowLeft') goToPrevScript();
+        else goToNextScript();
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       switch (e.key) {
         case 'ArrowDown':
@@ -355,7 +379,17 @@ function Stage(): JSX.Element {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stepNext, stepPrev, toggleTranscript, toggleFocus, toggleMirror, toggleSetup, closeSetup]);
+  }, [
+    stepNext,
+    stepPrev,
+    goToPrevScript,
+    goToNextScript,
+    toggleTranscript,
+    toggleFocus,
+    toggleMirror,
+    toggleSetup,
+    closeSetup,
+  ]);
 
   if (!script || !transcript || !set) return <Waiting message="No script selected." />;
 
@@ -570,7 +604,7 @@ function Stage(): JSX.Element {
           {/* The key legend is the first thing to go when the window narrows —
               it is a reminder, and the chips beside it are controls. */}
           <span className="hidden truncate font-mono text-[0.7rem] text-muted xl:inline">
-            ↑ ↓ space step · D reclaim · T · M · F
+            ↑ ↓ space step · ⌘← ⌘→ script · D reclaim · T · M · F
           </span>
 
           <span className="shrink-0">
