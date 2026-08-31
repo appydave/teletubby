@@ -370,6 +370,18 @@ a terminal you intend to keep open is still fine.
 machine has no `timeout`. The Procfile tees to `.logs/app.log` so a snapshot is
 possible: `bash scripts/app.sh tail`.
 
+⚠️ **During a recording block the prompter is a LIVE INSTRUMENT — no visual or
+behavioural renderer change reaches it unannounced.** Either stage the change behind a
+take boundary (wait for "between takes") or tell David in one line before it lands.
+HMR is the hazard precisely because it is frictionless: "no restart needed" is a
+benefit at a desk and a liability on camera — the absence of ceremony is what lets the
+instrument repaint in front of a performer with nobody deciding it should. This
+happened (2026-08-31, 08:32: the source-chip recolour landed mid-shoot, unannounced;
+takes survived, the rule exists so that stays luck, not process). It is NOT "stop
+shipping during a shoot" — four mid-shoot fixes that morning were right, one recovered
+a lost hour. Keep the speed; add the line. Tests, types, docs and anything that cannot
+reach the window are exempt.
+
 ⚠️ **`pgrep -f "electron-vite dev"` is ambiguous on this machine** — flicut runs the
 identical command line and answered first the one time it mattered. Scope it to
 `$PWD/node_modules/.bin/`.
