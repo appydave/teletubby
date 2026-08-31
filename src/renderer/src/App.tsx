@@ -378,7 +378,21 @@ function Stage(): JSX.Element {
     const onKey = (e: KeyboardEvent): void => {
       // ⌘← / ⌘→ — but never inside an editable field, where they mean
       // line-start / line-end and stealing them breaks text editing.
-      if (e.metaKey && !e.ctrlKey && !e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      //
+      // ⚠️ `!e.shiftKey` is load-bearing, not tidiness: Shift+⌘-arrows is
+      // RESERVED for stepping transcript revisions (design ratified
+      // 2026-08-31, built after the recording block). David has already said
+      // that chord out loud — without this guard it silently JUMPS SCRIPT,
+      // a wrong move with an invisible cause mid-take. Until versioning
+      // lands the chord is deliberately inert: doing nothing is fine, doing
+      // the wrong thing is not.
+      if (
+        e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.shiftKey &&
+        (e.key === 'ArrowLeft' || e.key === 'ArrowRight')
+      ) {
         const target = e.target as HTMLElement | null;
         if (
           target &&
