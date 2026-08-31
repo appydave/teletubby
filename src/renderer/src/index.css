@@ -219,14 +219,15 @@ body {
   padding-top: 0.25rem;
 }
 
-/* The zone label, and the "driving" chip with it.
+/* Small in-lane labels that sit ABOVE script text — today only the "Next" tag
+   on the paragraph peek. Hidden reclaimed because they are text between the
+   lens and a line the talent may read.
 
-   This is a real cost, stated rather than hidden: the chip is what says which
-   zone is driven IN WORDS as well as in colour. Reclaimed, that claim is
-   carried by the canvas/lane-alt background split and the strong marker alone.
-   The trade is deliberate — a label is a thing to read, and the reclaimed state
-   is the one where the talent is looking at the lens, not the screen. Press D
-   and the words come back. */
+   The zone name and its "driving" chip used to carry this class too, and paid
+   the same price: reclaimed, four lanes on screen had no names at all, and
+   David could not tell major from minor (2026-08-30). They live at the FOOT of
+   each lane now (ZoneShell), below everything, where they cost no lens distance
+   — so they are never hidden. This rule no longer touches them. */
 :root[data-reclaim='on'] .tt-zone-label {
   display: none;
 }

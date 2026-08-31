@@ -72,14 +72,30 @@ function ZoneShell({
       data-zone={zone}
       data-rank={rank}
       className={[
-        'tt-lane-scroll tt-lane-pad h-full w-full px-6 py-6',
+        'flex h-full w-full flex-col',
         rank === 'driven' ? 'bg-canvas' : 'bg-lane-alt',
       ].join(' ')}
     >
-      {/* Both of these carry a `tt-` hook so the RECLAIMED state can collapse
-          them from one CSS rule — see :root[data-reclaim='on'] in index.css.
-          The zone learns nothing about the state; the root publishes it. */}
-      <p className="tt-zone-label mb-4 flex items-center gap-2 font-display text-[0.65rem] uppercase tracking-[0.2em] text-muted">
+      {/* The scroll container is THIS div, not the section, so the label below
+          stays pinned while the list moves under the reading line. `.tt-lane-pad`
+          is the hook the reclaimed state collapses — see index.css. */}
+      <div className="tt-lane-scroll tt-lane-pad min-h-0 flex-1 px-6 py-6">{children}</div>
+
+      {/* THE ZONE LABEL IS AT THE FOOT OF THE LANE, and it is never hidden.
+
+          It used to sit at the top and be collapsed by the reclaimed state,
+          because up there it was 0.65rem of text between the lens and the first
+          word. Then David reviewed a script with four lanes on screen and could
+          not tell which was which: "you can't tell, there's no heading, and I
+          don't want the heading at the top because I need the top to be very
+          thin. That's why I thought it could be at the bottom" (2026-08-30).
+
+          Nobody's eyes travel BELOW the script on the way to a lens above it, so
+          down here it costs nothing — which is also why it no longer needs to
+          hide under D. The reclaimed screenshot he sent is exactly the state
+          where the labels had vanished. Same reasoning that moved the control
+          strip to the footer. */}
+      <p className="flex shrink-0 items-center gap-2 border-t border-edge px-6 py-1.5 font-display text-xs uppercase tracking-[0.2em] text-muted">
         {ZONE_LABEL[zone]}
         {/* The driven zone says so in words as well as colour — a marker you
             have to decode is a thing to learn, which the Star's test forbids. */}
@@ -87,7 +103,6 @@ function ZoneShell({
           <span className="rounded-sm bg-driven px-1.5 py-0.5 text-[0.6rem] text-ink">driving</span>
         )}
       </p>
-      {children}
     </section>
   );
 }
