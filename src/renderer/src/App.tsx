@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import type { ScriptSet, TriggerStyle } from '@shared/domain';
 import { TRIGGER_STYLE_LETTER } from '@shared/domain';
@@ -128,6 +128,61 @@ export default function App(): JSX.Element {
   if (failure) return <Waiting message={failure} failed />;
   if (!set) return <Waiting message="Loading the set…" />;
   return <Stage />;
+}
+
+/**
+ * The script title, click-to-copy. Both places the title renders use this —
+ * a rule that is true in one place and false in the other is worse than no
+ * rule ("click the title to copy" must not depend on WHICH title).
+ *
+ * Three decisions, each the fix for a way this could lie:
+ *
+ *   · It copies `script.title` FROM THE MODEL, never the DOM text. Both
+ *     renderings truncate, and hand-selecting the footer is exactly how David
+ *     was getting "WHAT AN ORCHESTRATOR AGE…" with a literal ellipsis in it.
+ *   · It CONFIRMS, and failure looks different from success. A silent
+ *     clipboard write and a failed one are indistinguishable until you paste
+ *     into something else and find nothing — absence must never render as
+ *     success (docs/kdd/learnings/absence-rendering-as-success.md).
+ *   · `navigator.clipboard` in the renderer, not an IPC round-trip to main's
+ *     clipboard module: it works in the dev server (localhost is a secure
+ *     context) and packaged (Chromium treats file:// as trustworthy), and it
+ *     needs no preload change — which would force an app restart under
+ *     David mid-session for a convenience feature.
+ */
+function CopyTitle({ text, className }: { text: string; className: string }): JSX.Element {
+  const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const timer = useRef<number | undefined>(undefined);
+
+  const copy = (): void => {
+    void navigator.clipboard
+      .writeText(text)
+      .then(() => setState('copied'))
+      .catch(() => setState('failed'));
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => setState('idle'), 1500);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      title="Click to copy the script title"
+      className={['tt-no-drag flex min-w-0 cursor-pointer items-center gap-2 text-left', className].join(' ')}
+    >
+      <span className="truncate hover:underline decoration-dotted underline-offset-2">{text}</span>
+      {state !== 'idle' && (
+        <span
+          className={[
+            'shrink-0 rounded-sm px-1.5 py-0.5 font-display text-[0.6rem] uppercase tracking-wide',
+            state === 'copied' ? 'bg-driven text-ink' : 'bg-ink text-ink-invert',
+          ].join(' ')}
+        >
+          {state === 'copied' ? 'Copied' : 'Copy failed'}
+        </span>
+      )}
+    </button>
+  );
 }
 
 function Waiting({ message, failed }: { message: string; failed?: boolean }): JSX.Element {
@@ -432,8 +487,11 @@ function Stage(): JSX.Element {
           win, and there is nothing this band is competing with.
 
           ⚠️ THIS IS THE ONLY DRAG REGION THE WINDOW HAS. `hiddenInset` means
-          the page supplies it or the window cannot be moved at all. Nothing in
-          it may be clickable and nothing can collapse it away.
+          the page supplies it or the window cannot be moved at all, and nothing
+          can collapse it away. The title is the ONE clickable thing in it
+          (`.tt-no-drag`, click-to-copy) — it carves its own width out of the
+          drag area and no more, and everything right of the title still drags.
+          Anything else that wants a click up here is a conversation first.
 
           It carries ONE thing: the script title. Reviewing script 06 from the
           chair, the title in the footer strip (14px, bottom-left) was
@@ -445,9 +503,10 @@ function Stage(): JSX.Element {
           Ruled 2026-08-30. Do NOT grow `h-7` for a bigger title.
       */}
       <div className="tt-drag flex h-7 shrink-0 items-center border-b border-edge bg-panel">
-        <span className="truncate font-display text-[18px] uppercase leading-none tracking-wide text-muted">
-          {script.title}
-        </span>
+        <CopyTitle
+          text={script.title}
+          className="font-display text-[18px] uppercase leading-none tracking-wide text-muted"
+        />
       </div>
 
       {/* ---------------- stage: mirrorable ---------------- */}
@@ -546,9 +605,10 @@ function Stage(): JSX.Element {
               ▶
             </StepButton>
           </div>
-          <span className="truncate font-display text-sm uppercase tracking-wide text-ink">
-            {script.title}
-          </span>
+          <CopyTitle
+            text={script.title}
+            className="font-display text-sm uppercase tracking-wide text-ink"
+          />
 
           <span className="h-4 w-px shrink-0 bg-edge" />
 
