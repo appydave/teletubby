@@ -140,4 +140,14 @@ export const rigSchema: z.ZodType<Rig> = z.object({
 export const workspaceSchema: z.ZodType<Workspace> = z.object({
   layout: rigLayoutSchema.nullable(),
   rigId: id('rig id').nullable(),
+  // Optional, not nullable-only: stores written before 2026-08-31 lack the key.
+  position: z
+    .object({
+      setId: z.string().nullable(),
+      scriptId: z.string().nullable(),
+      transcriptId: z.string().nullable(),
+      style: z.enum(TRIGGER_STYLES).nullable(),
+      paragraphId: z.string().nullable(),
+    })
+    .nullish(),
 });

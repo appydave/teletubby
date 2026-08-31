@@ -54,7 +54,7 @@ describe('a store with no rigs in it', () => {
       await asUi('list_rigs'),
     );
     expect(data.rigs).toEqual([]);
-    expect(data.workspace).toEqual({ layout: null, rigId: null });
+    expect(data.workspace).toEqual({ layout: null, rigId: null, position: null });
   });
 });
 
@@ -356,7 +356,7 @@ describe('across a restart', () => {
       await core2.invoke('list_rigs', {}, { principal: 'ui' }),
     );
     expect(data.rigs).toEqual([]);
-    expect(data.workspace).toEqual({ layout: null, rigId: null });
+    expect(data.workspace).toEqual({ layout: null, rigId: null, position: null });
 
     // And it is writable straight away, not merely readable.
     const saved = await core2.invoke(

@@ -849,7 +849,27 @@ export function createHandlers(): Record<string, Handler> {
    * when nobody is looking at the screen to catch it.
    */
   handlers.remember_layout = async (input, context) => {
-    const parsed = parse(z.object({ layout: layoutInput, rigId: slug.nullish() }), input);
+    const parsed = parse(
+      z.object({
+        layout: layoutInput,
+        rigId: slug.nullish(),
+        // The talent's place — script, corpus, style, paragraph — so a reload
+        // puts the same words back in front of them (2026-08-31, recording day:
+        // every dev reload was throwing away where David was mid-take). Stored
+        // as given: ids that stop existing are resolved at RESTORE time, where
+        // the current data is, not at write time.
+        position: z
+          .object({
+            setId: slug.nullable(),
+            scriptId: slug.nullable(),
+            transcriptId: slug.nullable(),
+            style: z.enum(TRIGGER_STYLES).nullable(),
+            paragraphId: slug.nullable(),
+          })
+          .nullish(),
+      }),
+      input,
+    );
 
     const layout = normalizeLayout(parsed.layout);
     assertDomain(validateRigLayout(layout));
@@ -860,7 +880,7 @@ export function createHandlers(): Record<string, Handler> {
       const rigId =
         parsed.rigId && document.rigs.some((rig) => rig.id === parsed.rigId) ? parsed.rigId : null;
       context.recordPrior(document.workspace);
-      document.workspace = { layout, rigId };
+      document.workspace = { layout, rigId, position: parsed.position ?? null };
       return { document, result: { applied: true, workspace: document.workspace } };
     });
   };

@@ -260,11 +260,43 @@ function Stage(): JSX.Element {
       const state = useProm.getState();
       void window.appytron.invoke({
         capability: 'remember_layout',
-        input: { layout: layoutOf(state), rigId: state.rigId },
+        input: {
+          layout: layoutOf(state),
+          rigId: state.rigId,
+          // The talent's place rides along with the layout — same store, same
+          // debounce, same rigsLoaded gate. The paragraph is stored by ID
+          // (style step counts differ); `load` resolves it on the way back in.
+          position: {
+            setId: state.set?.id ?? null,
+            scriptId: state.scriptId,
+            transcriptId: state.transcriptId,
+            style: state.style,
+            paragraphId: currentParagraphId(state),
+          },
+        },
       });
     }, REMEMBER_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [rigsLoaded, visible, driven, weights, camera, text, mirror, focus, rigId]);
+    // `step` stands in for the paragraph: the paragraph only changes when the
+    // step does, and subscribing to the derived id would be a new-object
+    // selector — the blanking bug. Script and transcript ids are deps in their
+    // own right: a script change lands on step 0, and a corpus flip can keep
+    // the step — either would otherwise change the position without writing it.
+  }, [
+    rigsLoaded,
+    visible,
+    driven,
+    weights,
+    camera,
+    text,
+    mirror,
+    focus,
+    rigId,
+    step,
+    style,
+    script?.id,
+    transcript?.id,
+  ]);
 
   /**
    * One key means one scale of movement:

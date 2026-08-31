@@ -29,6 +29,7 @@ import {
   type RecordingZone,
   type TextPreset,
   type Workspace,
+  type WorkspacePosition,
 } from '@shared/rig';
 
 /**
@@ -169,6 +170,14 @@ interface PrompterState {
    * up; on every launch after that, they have one already.
    */
   restoredLayout: boolean;
+  /**
+   * The saved position, held between `loadRigs` (which recalls it) and `load`
+   * (which resolves it against the data once the set arrives). Ids are resolved
+   * at restore time because the data may have changed since they were written —
+   * a paragraph that vanished lands the talent at the END, visibly, never
+   * silently at the top (docs/kdd: absence must not render as something else).
+   */
+  pendingPosition: WorkspacePosition | null;
 
   cue: CueCard | null;
   /** Increments each time a step was refused at the boundary, to replay the nudge. */
@@ -256,19 +265,54 @@ export const useProm = create<PrompterState>((set, get) => ({
   rigId: null,
   rigsLoaded: false,
   restoredLayout: false,
+  pendingPosition: null,
 
   cue: null,
   nudge: 0,
 
   load: (scriptSet) => {
-    const script = scriptSet.scripts[0];
-    const transcript = script ? defaultTranscript(script) : undefined;
+    /**
+     * Restore WHERE THE TALENT WAS, if the workspace recalled a position —
+     * David, mid-recording-day, on every dev reload: "you keep making changes
+     * and breaking my flow… it'd be even nicer if it could come to the
+     * paragraph you were looking at" (2026-08-31).
+     *
+     * Every id is resolved against the data that just arrived; what no longer
+     * exists falls back the same way `refresh` falls back. One rule is
+     * stricter: a REMEMBERED paragraph that has vanished from its transcript
+     * lands at the END — the end card lights, a visible statement — never
+     * silently at the top, which is the corpus-switch bug in restore clothes.
+     */
+    const pending = get().pendingPosition;
+    const wanted = pending && (!pending.setId || pending.setId === scriptSet.id) ? pending : null;
+    const script =
+      (wanted?.scriptId ? findScript(scriptSet, wanted.scriptId) : undefined) ??
+      scriptSet.scripts[0];
+    const transcript = script
+      ? ((wanted?.transcriptId ? findTranscript(script, wanted.transcriptId) : undefined) ??
+        defaultTranscript(script))
+      : undefined;
+    const style =
+      wanted?.style && transcript && findTriggerSet(transcript, wanted.style)
+        ? wanted.style
+        : defaultStyle(transcript);
+    const triggers = transcript && style ? (findTriggerSet(transcript, style)?.triggers ?? []) : [];
+
+    let step = 0;
+    if (wanted?.paragraphId && transcript) {
+      const known = paragraphsOf(transcript).some((p) => p.id === wanted.paragraphId);
+      step = known
+        ? stepAtParagraph(transcript, triggers, wanted.paragraphId)
+        : Math.max(0, triggers.length - 1);
+    }
+
     set({
       set: scriptSet,
       scriptId: script?.id ?? null,
       transcriptId: transcript?.id ?? null,
-      style: defaultStyle(transcript),
-      step: 0,
+      style,
+      step,
+      pendingPosition: null,
     });
   },
 
@@ -312,7 +356,39 @@ export const useProm = create<PrompterState>((set, get) => ({
         : defaultStyle(transcript);
 
     const triggers = transcript && style ? (findTriggerSet(transcript, style)?.triggers ?? []) : [];
-    const step = Math.min(state.step, Math.max(0, triggers.length - 1));
+
+    /**
+     * Re-seat by PARAGRAPH, never by step index. An agent rewriting the
+     * transcript being driven used to leave the INDEX in place — a trigger
+     * inserted before the current one moved the talent to a different beat,
+     * silently, with no cue (2026-08-31, the live-edit hole). Unlike the
+     * restore path, refresh still HOLDS the old structure, so a paragraph
+     * that vanished can be topic-mapped through the authored grouping
+     * (correspondingParagraphId) — and only when even that fails does it land
+     * at the END, card lit, visible. The index clamp survives solely as the
+     * fallback for "there was no paragraph to keep".
+     */
+    const from = currentTranscript(state);
+    const fromParagraph = currentParagraphId(state);
+    let step: number;
+    if (transcript && from && fromParagraph) {
+      if (transcript.id === from.id && triggers[state.step]?.paragraphId === fromParagraph) {
+        // The same index still points at the same paragraph — the common case
+        // (a reworded trigger, a new set elsewhere). Hold the exact beat;
+        // re-seating to the paragraph's FIRST trigger would itself be a move.
+        step = state.step;
+      } else {
+        const landing =
+          transcript.id === from.id && paragraphsOf(transcript).some((p) => p.id === fromParagraph)
+            ? fromParagraph
+            : correspondingParagraphId(from, fromParagraph, transcript);
+        step = landing
+          ? stepAtParagraph(transcript, triggers, landing)
+          : Math.max(0, triggers.length - 1);
+      }
+    } else {
+      step = Math.min(state.step, Math.max(0, triggers.length - 1));
+    }
 
     set({
       set: scriptSet,
@@ -556,8 +632,12 @@ export const useProm = create<PrompterState>((set, get) => ({
    */
   loadRigs: (rigs, workspace) => {
     const layout = workspace.layout;
+    // The position is recalled whether or not the layout validates — they are
+    // independent facts about how the talent left the app. `load` consumes it
+    // once the set arrives.
+    const pendingPosition = workspace.position ?? null;
     if (!layout || validateRigLayout(layout).length > 0) {
-      set({ rigs, rigId: workspace.rigId, rigsLoaded: true, restoredLayout: false });
+      set({ rigs, rigId: workspace.rigId, rigsLoaded: true, restoredLayout: false, pendingPosition });
       return;
     }
     set({
@@ -565,6 +645,7 @@ export const useProm = create<PrompterState>((set, get) => ({
       rigId: workspace.rigId,
       rigsLoaded: true,
       restoredLayout: true,
+      pendingPosition,
       ...cloneLayout(layout),
       visible: canonicalZones(layout.visible),
       transcriptEdge: edgeFor(layout.camera),

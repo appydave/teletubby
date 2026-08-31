@@ -27,7 +27,7 @@
  * writes they guard.
  */
 
-import type { DomainViolation } from './domain.js';
+import type { DomainViolation, TriggerStyle } from './domain.js';
 
 export type RigId = string;
 
@@ -99,12 +99,38 @@ export interface Rig {
  * whether the chip reads as clean or modified. Storing a "dirty" flag instead
  * would be a second source of truth for something derivable in one comparison.
  */
+/**
+ * Where the talent WAS — script, corpus, style, and the paragraph in front of
+ * them — so a reload puts the same words back in front of them.
+ *
+ * This deliberately reverses the original ruling that the workspace restores
+ * the layout and never the beat ("a prompter that reopens mid-script has
+ * decided where you are"). That ruling was written for reopening the app the
+ * next day. On 2026-08-31 David was recording seven videos while the app was
+ * being fixed under him, and every dev reload threw away his place: "you keep
+ * making changes and breaking my flow… it'd be even nicer if it could come to
+ * the paragraph you were looking at." Coming back where you left it IS the rig
+ * philosophy — the beat is only a faster-moving part of "how you left it".
+ *
+ * The paragraph is stored by ID, not step index: step counts differ per
+ * trigger style, and the paragraph is the unit the talent thinks in.
+ */
+export interface WorkspacePosition {
+  setId: string | null;
+  scriptId: string | null;
+  transcriptId: string | null;
+  style: TriggerStyle | null;
+  paragraphId: string | null;
+}
+
 export interface Workspace {
   layout: RigLayout | null;
   rigId: RigId | null;
+  /** Absent in stores written before 2026-08-31; treat as null. */
+  position?: WorkspacePosition | null;
 }
 
-export const EMPTY_WORKSPACE: Workspace = { layout: null, rigId: null };
+export const EMPTY_WORKSPACE: Workspace = { layout: null, rigId: null, position: null };
 
 /**
  * The opening arrangement — the triggers plus the paragraph they belong to.

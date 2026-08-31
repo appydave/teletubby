@@ -191,6 +191,110 @@ describe('every boundary crossing announces itself', () => {
     expect(currentParagraphId(s())).toBe(from);
   });
 
+  it('a live rewrite that DELETES the current topic lands at the END, visibly', () => {
+    // The vanished case first: this is where a mistake moves the talent
+    // somewhere silently, which is the defect being fixed. Tom's p3 owns minor
+    // t2.1 under major t2; the rewrite removes that whole major, so neither the
+    // paragraph nor its topic survives. The talent must land at the END — the
+    // end card is the visible statement — never silently at the top.
+    useProm.setState({ visible: ['paragraph'], driven: 'paragraph' });
+    s().selectScript(SCRIPT_02);
+    s().selectTranscript('tom-original');
+    s().stepNext();
+    s().stepNext();
+    expect(currentParagraphId(s())).toBe('p3');
+
+    const rewritten = structuredClone(KYBERNESIS_PHASE_1);
+    const script = rewritten.scripts.find((x) => x.id === SCRIPT_02)!;
+    const tom = script.transcripts.find((t) => t.corpus === 'tom-original')!;
+    tom.topics = tom.topics.filter((major) => major.id !== 't2');
+    for (const set of tom.triggerSets)
+      set.triggers = set.triggers.filter((t) => t.paragraphId !== 'p3');
+    s().refresh(rewritten);
+
+    expect(s().scriptId).toBe(SCRIPT_02);
+    expect(isLastStep(s())).toBe(true);
+    expect(currentParagraphId(s())).not.toBe('p1');
+  });
+
+  it('a live rewrite that INSERTS a trigger keeps the talent on their paragraph', () => {
+    // The drift case: the old refresh kept the step INDEX, so a trigger
+    // prepended to the set moved the talent one beat back without a word.
+    s().selectScript(SCRIPT_01);
+    s().selectTranscript('tom-original');
+    useProm.setState({ visible: ['paragraph'], driven: 'paragraph' });
+    s().stepNext();
+    const before = currentParagraphId(s())!;
+    expect(before).not.toBe('p1');
+
+    const grown = structuredClone(KYBERNESIS_PHASE_1);
+    const script = grown.scripts.find((x) => x.id === SCRIPT_01)!;
+    const tom = script.transcripts.find((t) => t.corpus === 'tom-original')!;
+    tom.triggerSets[0]!.triggers.unshift({ text: 'NEW HOOK', paragraphId: 'p1' });
+    useProm.setState({ cue: null }); // clear the script-change cue from setup
+    s().refresh(grown);
+
+    expect(currentParagraphId(s())).toBe(before);
+    // And no cue: the data changed underneath, the talent crossed nothing.
+    expect(s().cue).toBeNull();
+  });
+
+  it('restores the remembered position — script, corpus, style, paragraph', () => {
+    // Recording day, 2026-08-31: every dev reload dropped David to the top of
+    // script 01. The workspace now recalls his place; `load` resolves it.
+    useProm.setState({
+      pendingPosition: {
+        setId: 'kybernesis-phase-1',
+        scriptId: SCRIPT_02,
+        transcriptId: 'tom-original',
+        style: 'compressed-concept',
+        paragraphId: 'p3',
+      },
+    });
+    s().load(KYBERNESIS_PHASE_1);
+
+    expect(s().scriptId).toBe(SCRIPT_02);
+    expect(currentTranscript(s())?.corpus).toBe('tom-original');
+    expect(s().style).toBe('compressed-concept');
+    expect(currentParagraphId(s())).toBe('p3');
+    // Consumed: a later data refresh must not re-teleport the talent.
+    expect(s().pendingPosition).toBeNull();
+  });
+
+  it('a remembered position for a VANISHED paragraph lands at the END, visibly', () => {
+    // The restore twin of the corpus-switch rule: a paragraph that no longer
+    // exists must not silently become paragraph 1 — the end card is a visible
+    // statement that the remembered place has nowhere to go.
+    useProm.setState({
+      pendingPosition: {
+        setId: 'kybernesis-phase-1',
+        scriptId: SCRIPT_02,
+        transcriptId: 'tom-original',
+        style: 'compressed-concept',
+        paragraphId: 'p999',
+      },
+    });
+    s().load(KYBERNESIS_PHASE_1);
+
+    expect(s().scriptId).toBe(SCRIPT_02);
+    expect(isLastStep(s())).toBe(true);
+  });
+
+  it('a remembered position whose ids all vanished falls back to the top, honestly', () => {
+    useProm.setState({
+      pendingPosition: {
+        setId: 'kybernesis-phase-1',
+        scriptId: 'kybernesis-phase-1/99',
+        transcriptId: 'gone',
+        style: null,
+        paragraphId: null,
+      },
+    });
+    s().load(KYBERNESIS_PHASE_1);
+    expect(s().scriptId).toBe(SCRIPT_01);
+    expect(s().step).toBe(0);
+  });
+
   it('maps by TOPIC at the ragged edge, never by paragraph index', () => {
     // v02 re-cadences four of Tom's paragraphs into three: t1.1 + t1.2 fold
     // into one. A flat index would put Tom's p3 (t2.1) on the rewrite's p3
