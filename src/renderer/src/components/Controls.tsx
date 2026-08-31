@@ -30,6 +30,7 @@ export function Chip({
   onClick,
   title,
   mono,
+  source,
   children,
 }: {
   on: boolean;
@@ -37,6 +38,22 @@ export function Chip({
   onClick: () => void;
   title?: string;
   mono?: boolean;
+  /**
+   * A SOURCE, not a thing to perform. The domain has known the difference all
+   * along (`kind: 'provenance'` — "meaning is not voiced") and the chip row
+   * threw it away: David spent an hour focused on tom-original believing the
+   * rewrite hadn't arrived, because both kinds rendered as identical grey
+   * chips ("The Tom original has absolutely no meaning to me other than it
+   * was the original source… it should be clearly coloured differently so I
+   * know that it's a source", 2026-08-31).
+   *
+   * The vocabulary: unselected source = dashed ghost. SELECTED source = dark
+   * ink, never yellow — being on the source is exactly the state that must
+   * announce itself, and yellow stays reserved for "a corpus you perform".
+   * Ink is the quiet-and-other choice: yellow is driven, gold is follower,
+   * amber is sequence, and a second loud colour would compete.
+   */
+  source?: boolean;
   children: React.ReactNode;
 }): JSX.Element {
   return (
@@ -49,9 +66,13 @@ export function Chip({
       className={[
         'rounded border px-2.5 py-0.5 uppercase tracking-wide transition',
         mono ? 'font-mono text-xs normal-case' : 'font-display text-[0.7rem]',
-        on
-          ? 'border-edge-strong bg-driven text-ink'
-          : 'border-edge bg-card text-muted hover:text-ink',
+        source
+          ? on
+            ? 'border-ink bg-ink text-ink-invert'
+            : 'border-dashed border-edge-strong bg-transparent text-muted hover:text-ink'
+          : on
+            ? 'border-edge-strong bg-driven text-ink'
+            : 'border-edge bg-card text-muted hover:text-ink',
         disabled ? 'cursor-not-allowed opacity-35 hover:text-muted' : '',
       ].join(' ')}
     >

@@ -638,9 +638,25 @@ function Stage(): JSX.Element {
                 across the room, which is the actual viewing distance. */}
             {script.transcripts.map((t) => {
               const arrived = (freshTranscripts[script.id] ?? []).includes(t.id);
+              const isSource = t.kind === 'provenance';
               return (
-                <Chip key={t.id} on={t.id === transcript.id} onClick={() => selectTranscript(t.id)}>
+                <Chip
+                  key={t.id}
+                  on={t.id === transcript.id}
+                  source={isSource}
+                  title={
+                    isSource
+                      ? 'Source material — the original, not a performance script'
+                      : undefined
+                  }
+                  onClick={() => selectTranscript(t.id)}
+                >
                   {t.corpus}
+                  {isSource && (
+                    <span className="ml-1.5 font-mono text-[0.6rem] normal-case tracking-normal opacity-70">
+                      source
+                    </span>
+                  )}
                   {arrived && (
                     <span className="ml-1.5 inline-block h-2.5 w-2.5 animate-pulse rounded-full bg-driven align-middle ring-1 ring-edge-strong" />
                   )}
