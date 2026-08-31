@@ -40,6 +40,7 @@ Seeded 2026-08-19 from the first build session. Every entry below was paid for t
 | [Correspondence between versions is by authored structure, never index](learnings/correspondence-between-versions-is-by-authored-structure-never-index.md) | domain | high | Flipping Tom ↔ rewrite reset to paragraph 1 because "no honest correspondence exists". It does — the authored topic grouping — and the ragged edge lands on the END, visibly, never the top. (2026-08-30) |
 | [Absence rendering as success](learnings/absence-rendering-as-success.md) | correctness | high | Rule 6 passed on an empty term list; an unauthored trigger set lit the end card; a dropped CLI argument said *not found*. **Recurrence 3 — at the promotion bar, human to rule.** (2026-08-30) |
 | [An occluded Electron window cannot be screenshotted for proof](learnings/an-occluded-electron-window-cannot-be-screenshotted-for-proof.md) | tooling | medium | Identical pixels before and after an HMR that changed the page. Stale frame, failed render and nothing-to-change look the same; only a focused window or a human proves it. (2026-08-30) |
+| [The store has no file watcher — safe only while writes go through the API](learnings/the-store-has-no-file-watcher-safe-only-while-writes-go-through-the-api.md) | architecture | medium | The running app never re-reads `teletubby.json`; live updates exist because `onChange` fires inside the writing process. One direct disk edit = silent divergence. A convention, not an enforcement. (2026-08-31) |
 
 ## Decisions
 
