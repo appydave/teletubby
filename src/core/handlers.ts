@@ -16,11 +16,8 @@
  */
 
 import { z } from '@appydave/core';
+import { INPUT, describeInput } from './input-shapes.js';
 import {
-  PROJECT_NAME_MAX,
-  PROJECT_NAME_PATTERN,
-  TRANSCRIPT_KINDS,
-  TRIGGER_STYLES,
   findScript,
   findTranscript,
   findTriggerSet,
@@ -38,9 +35,6 @@ import {
 } from '@shared/domain';
 import { rigSchema, scriptSetSchema, talentSchema } from '@shared/domain-schema';
 import {
-  CAMERA_SIDES,
-  RECORDING_SET,
-  TEXT_PRESETS,
   canonicalZones,
   validateRig,
   validateRigLayout,
@@ -85,21 +79,11 @@ const parse = <T>(schema: z.ZodType<T>, input: unknown): T => {
   return (parsed as { data: T }).data;
 };
 
-/** Fields every command accepts, stripped before the handler sees the rest. */
-const commandEnvelope = {
-  dryRun: z.boolean().optional(),
-  confirmationId: z.string().optional(),
-  idempotencyKey: z.string().optional(),
-};
 
-const slug = z.string().min(1);
 
-/** A FliHub folder name, verbatim — FliHub's own kebab rule, mirrored not reinvented. */
-const projectName = z
-  .string()
-  .trim()
-  .regex(PROJECT_NAME_PATTERN, 'not a FliHub folder name (kebab-case, e.g. d01-kybernesis-12-videos)')
-  .max(PROJECT_NAME_MAX, `a FliHub folder name is at most ${PROJECT_NAME_MAX} characters`);
+
+
+
 
 /* ------------------------------------------------------------------ *
  * Resolution — with ambient context as the default argument
@@ -250,39 +234,10 @@ const mintTriggerIds = (set: TriggerSet): TriggerSet => ({
  * Input schemas
  * ------------------------------------------------------------------ */
 
-const paragraphInput = z.object({
-  id: z.string().optional(),
-  text: z.string().min(1),
-});
-const minorInput = z.object({
-  id: z.string().optional(),
-  heading: z.string().min(1),
-  paragraphs: z.array(paragraphInput).min(1),
-});
-const majorInput = z.object({
-  id: z.string().optional(),
-  heading: z.string().min(1),
-  minors: z.array(minorInput).min(1),
-});
-/**
- * A layout as a caller supplies it. `visible` is canonicalised on the way in
- * rather than rejected out of order — the order a human toggled zones in is not
- * information, and refusing it would make a hand-written rig fiddly for no gain.
- */
-const layoutInput = z.object({
-  visible: z.array(z.enum(RECORDING_SET)).min(1),
-  driven: z.enum(RECORDING_SET),
-  weights: z.object({
-    major: z.number().finite(),
-    minor: z.number().finite(),
-    triggers: z.number().finite(),
-    paragraph: z.number().finite(),
-  }),
-  camera: z.enum(CAMERA_SIDES),
-  text: z.enum(TEXT_PRESETS),
-  mirror: z.boolean(),
-  focus: z.boolean(),
-});
+
+
+
+
 
 const normalizeLayout = (layout: RigLayout): RigLayout => ({
   ...layout,
@@ -290,11 +245,7 @@ const normalizeLayout = (layout: RigLayout): RigLayout => ({
   weights: { ...layout.weights },
 });
 
-const triggerInput = z.object({
-  id: z.string().optional(),
-  text: z.string().min(1),
-  paragraphId: slug,
-});
+
 
 /* ------------------------------------------------------------------ *
  * The handlers
@@ -310,7 +261,14 @@ export function createHandlers(): Record<string, Handler> {
     // not call is how an agent burns a turn discovering a permission error.
     capabilities: CAPABILITIES.filter((capability) =>
       capability.principals.includes(context.principal),
-    ),
+    ).map((capability) => ({
+      ...capability,
+      // GENERATED from the same zod schema the gate validates with — one
+      // truth. A verb that takes nothing publishes [], never a missing key,
+      // so absence is impossible (2026-09-02: an agent could discover
+      // rename_set existed and not that it takes a title).
+      input: INPUT[capability.name] ? describeInput(INPUT[capability.name]) : [],
+    })),
     principal: context.principal,
   });
 
@@ -319,16 +277,7 @@ export function createHandlers(): Record<string, Handler> {
   handlers.get_active_context = async (_input, context) => context.active.get();
 
   handlers.set_active_context = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        setId: slug.nullish(),
-        scriptId: slug.nullish(),
-        transcriptId: slug.nullish(),
-        style: z.enum(TRIGGER_STYLES).nullish(),
-        step: z.number().int().nonnegative().nullish(),
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.set_active_context, input);
     return context.active.set(parsed as never);
   };
 
@@ -348,10 +297,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.get_set = async (input, context) => {
-    const { setId, full } = parse(
-      z.object({ setId: slug.optional(), full: z.boolean().optional() }),
-      input,
-    );
+    const { setId, full } = parse(INPUT.get_set, input);
     const document = await context.repository.read();
     const set = resolveSet(document, setId, context.active);
     // Summary by default — that is what makes twelve scripts scannable in one
@@ -361,10 +307,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.get_script = async (input, context) => {
-    const { setId, scriptId } = parse(
-      z.object({ setId: slug.optional(), scriptId: slug.optional() }),
-      input,
-    );
+    const { setId, scriptId } = parse(INPUT.get_script, input);
     const document = await context.repository.read();
     const set = resolveSet(document, setId, context.active);
     return {
@@ -374,14 +317,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.get_transcript = async (input, context) => {
-    const ids = parse(
-      z.object({
-        setId: slug.optional(),
-        scriptId: slug.optional(),
-        transcriptId: slug.optional(),
-      }),
-      input,
-    );
+    const ids = parse(INPUT.get_transcript, input);
     const { set, script, transcript } = await resolveAll(context, ids);
     return {
       setId: set.id,
@@ -392,15 +328,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.get_trigger_set = async (input, context) => {
-    const ids = parse(
-      z.object({
-        setId: slug.optional(),
-        scriptId: slug.optional(),
-        transcriptId: slug.optional(),
-        style: z.enum(TRIGGER_STYLES),
-      }),
-      input,
-    );
+    const ids = parse(INPUT.get_trigger_set, input);
     const { script, transcript } = await resolveAll(context, ids);
     const triggerSet = findTriggerSet(transcript, ids.style);
     if (!triggerSet)
@@ -416,7 +344,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.get_talent = async (input, context) => {
-    const { talentId } = parse(z.object({ talentId: slug }), input);
+    const { talentId } = parse(INPUT.get_talent, input);
     const document = await context.repository.read();
     const talent = document.talents.find((candidate) => candidate.id === talentId);
     if (!talent)
@@ -427,19 +355,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.score_transcript = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        setId: slug.optional(),
-        scriptId: slug.optional(),
-        transcriptId: slug.optional(),
-        /** Score arbitrary text instead of a stored transcript. */
-        text: z.string().min(1).optional(),
-        talentId: slug,
-        /** Content terms the provenance owner requires to survive re-cadencing. */
-        mustTerms: z.array(z.string().min(1)).optional(),
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.score_transcript, input);
 
     const document = await context.repository.read();
     const talent = document.talents.find((candidate) => candidate.id === parsed.talentId);
@@ -466,25 +382,7 @@ export function createHandlers(): Record<string, Handler> {
   /* --- writing ----------------------------------------------------- */
 
   handlers.create_set = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        id: slug,
-        title: z.string().min(1),
-        description: z.string().default(''),
-        /**
-         * The FliHub folder name, VERBATIM and FULL — `d01-kybernesis-12-videos`,
-         * never a short code. On FliHub's side `d01` resolves by prefix to the
-         * first alphabetical match: a lookup convenience, not an identifier.
-         * Existence over there is NOT checked here — FliHub may be down, and its
-         * projects root holds non-project folders too. A caller wanting the
-         * courtesy check resolves via FliHub's API (GET :5101/api/query/projects)
-         * before calling. David names projects; the app never invents one.
-         */
-        project: projectName.nullish(),
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.create_set, input);
     const set: ScriptSet = {
       id: parsed.id,
       title: parsed.title,
@@ -514,15 +412,7 @@ export function createHandlers(): Record<string, Handler> {
    * is a move, not a rename, and moves are unbuilt in both apps by ruling.
    */
   handlers.rename_set = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        setId: slug.optional(),
-        title: z.string().trim().min(1).optional(),
-        project: projectName.nullish(),
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.rename_set, input);
     if (parsed.title === undefined && parsed.project == null)
       fail('invalid_input', 'nothing to do — pass a new title, a project to attach, or both');
 
@@ -555,27 +445,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.create_script = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        setId: slug.optional(),
-        id: slug,
-        n: z.number().int().positive().optional(),
-        title: z.string().min(1),
-        takeaway: z.string().min(1),
-        summary: z.string().min(1),
-        /** Optional provenance transcript, so one call can land a whole script. */
-        provenance: z
-          .object({
-            id: slug.optional(),
-            corpus: slug,
-            source: z.string().min(1),
-            topics: z.array(majorInput).min(1),
-          })
-          .optional(),
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.create_script, input);
 
     return context.repository.update<unknown>((document) => {
       const set = resolveSet(document, parsed.setId, context.active);
@@ -616,17 +486,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.update_script = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        setId: slug.optional(),
-        scriptId: slug.optional(),
-        title: z.string().min(1).optional(),
-        takeaway: z.string().min(1).optional(),
-        summary: z.string().min(1).optional(),
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.update_script, input);
 
     return context.repository.update<unknown>((document) => {
       const set = resolveSet(document, parsed.setId, context.active);
@@ -660,21 +520,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.write_transcript = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        setId: slug.optional(),
-        scriptId: slug.optional(),
-        id: slug,
-        kind: z.enum(TRANSCRIPT_KINDS),
-        corpus: slug,
-        talentId: slug.nullish(),
-        source: z.string().min(1),
-        topics: z.array(majorInput).min(1),
-        /** Trigger sets are written separately; an existing set is preserved. */
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.write_transcript, input);
 
     return context.repository.update<unknown>((document) => {
       const set = resolveSet(document, parsed.setId, context.active);
@@ -728,19 +574,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.write_trigger_set = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        setId: slug.optional(),
-        scriptId: slug.optional(),
-        transcriptId: slug.optional(),
-        style: z.enum(TRIGGER_STYLES),
-        authoredBy: z.enum(['hand', 'agent']).default('agent'),
-        note: z.string().optional(),
-        triggers: z.array(triggerInput).min(2),
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.write_trigger_set, input);
 
     return context.repository.update<unknown>((document) => {
       const set = resolveSet(document, parsed.setId, context.active);
@@ -785,28 +619,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.upsert_talent = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        id: slug,
-        name: z.string().min(1),
-        envelope: z.object({
-          wordsMin: z.number().int().nonnegative(),
-          wordsMax: z.number().int().positive(),
-          breathGroupMeanMin: z.number().nonnegative(),
-          breaksPer100Max: z.number().nonnegative(),
-          sentenceSdMin: z.number().nonnegative(),
-          emDashMax: z.number().int().nonnegative(),
-          antiVoice: z.array(z.string().min(1)).default([]),
-          bookends: z.array(z.string().min(1)).default([]),
-          // Never guessable. An envelope with no provenance is a number
-          // someone will later port to another talent because nothing said
-          // whose it was.
-          source: z.string().min(1),
-        }),
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.upsert_talent, input);
 
     const talent: Talent = {
       id: parsed.id,
@@ -850,15 +663,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.save_rig = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        id: slug,
-        label: z.string().min(1),
-        layout: layoutInput,
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.save_rig, input);
 
     const rig: Rig = {
       id: parsed.id,
@@ -886,10 +691,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.rename_rig = async (input, context) => {
-    const parsed = parse(
-      z.object({ id: slug, label: z.string().min(1), ...commandEnvelope }),
-      input,
-    );
+    const parsed = parse(INPUT.rename_rig, input);
 
     return context.repository.update<unknown>((document) => {
       const rig = document.rigs.find((candidate) => candidate.id === parsed.id);
@@ -922,27 +724,7 @@ export function createHandlers(): Record<string, Handler> {
    * when nobody is looking at the screen to catch it.
    */
   handlers.remember_layout = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        layout: layoutInput,
-        rigId: slug.nullish(),
-        // The talent's place — script, corpus, style, paragraph — so a reload
-        // puts the same words back in front of them (2026-08-31, recording day:
-        // every dev reload was throwing away where David was mid-take). Stored
-        // as given: ids that stop existing are resolved at RESTORE time, where
-        // the current data is, not at write time.
-        position: z
-          .object({
-            setId: slug.nullable(),
-            scriptId: slug.nullable(),
-            transcriptId: slug.nullable(),
-            style: z.enum(TRIGGER_STYLES).nullable(),
-            paragraphId: slug.nullable(),
-          })
-          .nullish(),
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.remember_layout, input);
 
     const layout = normalizeLayout(parsed.layout);
     assertDomain(validateRigLayout(layout));
@@ -961,16 +743,7 @@ export function createHandlers(): Record<string, Handler> {
   /* --- removal: preview → confirm → execute ------------------------ */
 
   handlers.delete_trigger_set = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        setId: slug.optional(),
-        scriptId: slug.optional(),
-        transcriptId: slug.optional(),
-        style: z.enum(TRIGGER_STYLES),
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.delete_trigger_set, input);
     const { transcript } = await resolveAll(context, parsed);
     const target = findTriggerSet(transcript, parsed.style);
     if (!target)
@@ -999,14 +772,7 @@ export function createHandlers(): Record<string, Handler> {
   };
 
   handlers.delete_script = async (input, context) => {
-    const parsed = parse(
-      z.object({
-        setId: slug.optional(),
-        scriptId: slug.optional(),
-        ...commandEnvelope,
-      }),
-      input,
-    );
+    const parsed = parse(INPUT.delete_script, input);
     const document = await context.repository.read();
     const set = resolveSet(document, parsed.setId, context.active);
     const script = resolveScript(set, parsed.scriptId, context.active);
@@ -1043,13 +809,13 @@ export function createHandlers(): Record<string, Handler> {
   });
 
   handlers.approve_pending = async (input, context) => {
-    const { pendingId } = parse(z.object({ pendingId: z.string().min(1) }), input);
+    const { pendingId } = parse(INPUT.approve_pending, input);
     const approved = context.confirmations.approve(pendingId);
     return { approved: true, pending: approved };
   };
 
   handlers.delete_rig = async (input, context) => {
-    const parsed = parse(z.object({ id: slug, ...commandEnvelope }), input);
+    const parsed = parse(INPUT.delete_rig, input);
     const document = await context.repository.read();
     const rig = document.rigs.find((candidate) => candidate.id === parsed.id);
     if (!rig)
