@@ -2,7 +2,7 @@
 doc: design-note
 project: teletubby
 date: 2026-09-02
-status: designed, cross-checked with flihub-dev, AWAITING GO (David: "wait for agent-a-day")
+status: SHIPPED 2026-09-02 (commit 213e874) — create/switch/rename live, d01 attached to kybernesis-phase-1; guard refusals verified against the running app
 source: plaud 0729 2026-09-02 (David's spec) · agent-a-day-orch narrowing · flihub-dev contract
 ---
 
