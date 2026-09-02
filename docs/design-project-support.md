@@ -29,6 +29,14 @@ chapter-script) is PARKED with David — nothing here depends on it.
 - Machine-readable while FliHub runs: `GET :5101/api/query/projects` and
   `/api/query/projects/:code` (prefix-tolerant); `POST /api/projects` creates. Do NOT
   read `v-appydave/projects.json` (DAM manifest, not the registry).
+- ⚠️ **The endpoint currently serves 4 non-projects as projects** (`catalog`, `docs`,
+  `poem`, `tools` — 66 rows, 62 real; measured 2026-09-02). The ruling for the future
+  read-from-registry picker is that the filter lives in FLIHUB'S endpoint, never in
+  consumers — so the picker stays blocked on that FliHub fix (held in their queue, per
+  agent-a-day-orch). Do not wire a picker to the raw endpoint; it would show four
+  phantom projects. Codes are also NOT unique over there (`d01-foo` and `d01-bar` can
+  both exist; prefix resolution picks alphabetically) — Teletubby's defence is
+  structural: it never resolves, so it cannot pick wrong.
 
 ## The design
 
