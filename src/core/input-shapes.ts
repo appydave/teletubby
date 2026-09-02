@@ -269,6 +269,14 @@ export interface InputField {
   name: string;
   type: string;
   required: boolean;
+  /**
+   * Present when omitting the field APPLIES A VALUE rather than leaving it
+   * absent. The case that demanded it: write_trigger_set.authoredBy defaults
+   * to 'agent' — on the one field where provenance is the whole point, a
+   * caller reading only `required: false` could not tell that omission stamps
+   * the work as agent-authored (2026-09-02).
+   */
+  default?: unknown;
   note?: string;
 }
 
@@ -323,13 +331,40 @@ const noteOf = (schema: z.ZodTypeAny): string | undefined => {
   return undefined;
 };
 
+/** Walk in for a ZodDefault at any wrapping depth; its value is the published default. */
+const defaultOf = (schema: z.ZodTypeAny): unknown => {
+  let current: z.ZodTypeAny | undefined = schema;
+  while (current) {
+    const def: {
+      typeName?: string;
+      innerType?: z.ZodTypeAny;
+      schema?: z.ZodTypeAny;
+      defaultValue?: () => unknown;
+    } = (
+      current as z.ZodTypeAny & {
+        _def: {
+          typeName?: string;
+          innerType?: z.ZodTypeAny;
+          schema?: z.ZodTypeAny;
+          defaultValue?: () => unknown;
+        };
+      }
+    )._def;
+    if (def.typeName === 'ZodDefault' && def.defaultValue) return def.defaultValue();
+    current = def.innerType ?? def.schema;
+  }
+  return undefined;
+};
+
 export const describeInput = (schema: z.ZodObject<z.ZodRawShape>): InputField[] =>
   Object.entries(schema.shape).map(([name, field]) => {
     const note = noteOf(field);
+    const fallback = defaultOf(field);
     return {
       name,
       type: typeOf(field),
       required: !field.isOptional(),
+      ...(fallback !== undefined ? { default: fallback } : {}),
       ...(note ? { note } : {}),
     };
   });

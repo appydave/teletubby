@@ -44,12 +44,15 @@ chapter-script) is PARKED with David — nothing here depends on it.
    parsed into code+name fields; display may slice the `d01` prefix for a chip.
    Backfill: `kybernesis-phase-1` → `d01-kybernesis-12-videos`.
 2. **`create_set`** input gains optional `project` (kebab-validated).
-3. **`rename_set`** (new verb, HELD pending Swagger/David's confirm): changes `title`
-   ONLY — which is precisely FliHub's FR-157 layer (mutable display titles over
-   immutable folder identity), so it has an exact counterpart and NO desync surface.
-   Swagger's rename concern applies to IDENTITY rename — which this verb refuses by
-   construction: an input touching `project` errors with "that's a move, not a rename".
-   Null→value is an **attach** (allowed; the backfill path). Value→different refused.
+3. **`rename_set`** (shipped): changes `title` — FliHub's FR-157 layer (mutable display
+   titles over immutable folder identity), so it has an exact counterpart and NO desync
+   surface — **and/or ATTACHES an unattached set** to its FliHub project. The precise
+   rule, corrected 2026-09-02 after "title only" and "null→value is an attach" were
+   caught in tension: **the project identity is immutable ONCE SET** — an unattached
+   set can be attached through this verb; an attached one cannot be moved.
+   Value→different errors with "a move, not a rename". An empty call is refused
+   loudly ("nothing to do"), never a silent no-op — verified at runtime, not only
+   read from the code.
    David's transcript aspiration ("renaming should lead to renaming the folder") maps
    to the deferred MOVE, unbuilt in both apps — not to this verb.
 

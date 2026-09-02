@@ -98,6 +98,17 @@ describe('the shapes are the validator, not a transcription', () => {
     expect(field(input, 'triggers').type).toMatch(/^array</);
   });
 
+  it('a field with a default publishes it — omission that APPLIES a value is not plain optionality', async () => {
+    // authoredBy is the field where this matters: omitting it stamps the work
+    // as agent-authored, and required:false alone could not say so.
+    const { input } = await entry('write_trigger_set');
+    expect(field(input, 'authoredBy')).toMatchObject({ required: false, default: 'agent' });
+    const created = await entry('create_set');
+    expect(field(created.input, 'description')).toMatchObject({ required: false, default: '' });
+    // And a plain optional field publishes NO default key at all.
+    expect('default' in field(created.input, 'project')).toBe(false);
+  });
+
   it('required fields read as required', async () => {
     const { input } = await entry('get_talent');
     expect(field(input, 'talentId')).toMatchObject({ required: true, type: 'string' });
