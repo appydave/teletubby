@@ -334,15 +334,15 @@ a stray positional and names the right form. Absence and failure must never look
 `test/capability-surface.test.ts` pins — so it cannot drift from the app. Prose here
 can, and just did.
 
-⚠️ **What `capabilities` does NOT yet publish: per-verb INPUT shapes.** It returns
-`kind`, `sideEffects`, `principals`, `idempotent`, `confirmationRequired`,
-`supportsDryRun`, `announces` and `failureModes` — everything about *how* a verb
-behaves and nothing about *what fields it takes*. So an agent can discover that
-`get_script` exists and is a read-only query, then has to guess `scriptId` or read
-`src/core/handlers.ts`. The Zod schemas in `domain-schema.ts` validate domain OBJECTS
-(a set, a rig, a talent), not the verb's input envelope, so there is nothing to derive
-this from today — it has to be authored per verb and published. That is the real fix,
-and it is the first thing that makes this surface self-teaching.
+**`capabilities` publishes per-verb INPUT shapes** (2026-09-02). Every verb carries
+`input` — field name, type, required/optional, and a `.describe()` note where a field is
+constrained — derived at answer time from `src/core/input-shapes.ts`, which holds THE
+zod schema each handler parses with (`parse(INPUT.<verb>, input)`). One schema, two
+jobs: the object that refuses a bad call is the object that documents the call, so the
+published surface cannot drift from the validator. A verb that takes nothing publishes
+`input: []`, never a missing key — absence is impossible. Pinned in
+`test/input-shapes.test.ts`. When adding a verb, its schema goes in `input-shapes.ts`,
+not inline — an inline schema is invisible to `describe_capabilities`.
 
 The app must be running — the surface lives in its process. Port and token come from
 `~/Library/Application Support/teletubby/control.json`, written per launch.
