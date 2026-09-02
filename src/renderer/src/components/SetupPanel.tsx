@@ -6,6 +6,180 @@ import { Chip } from './Controls';
 import RigAdmin from './RigAdmin';
 import type { Rig } from '@shared/rig';
 
+/**
+ * PROJECTS — visible from ONE set, with a create affordance.
+ *
+ * Both halves are the fix for the same failure: project support shipped
+ * (2026-09-02) and David opened the app and found nothing — the chip row
+ * only rendered at 2+ sets and no create control existed at any count.
+ * "I don't see projects or anything like that. I don't see whether I can
+ * create a project or update it." An empty-looking panel and a broken panel
+ * are indistinguishable from the chair.
+ *
+ * This calls the SAME guarded verbs the agent uses — create_set / rename_set
+ * over the ui principal. No second code path, no renderer-side validation:
+ * the core's refusals (kebab rule, "a move, not a rename") surface verbatim
+ * as the error line. If this UI ever needs a rule the verb lacks, the verb
+ * is wrong — fix it there.
+ */
+function ProjectAdmin(): JSX.Element {
+  const sets = useProm((s) => s.sets);
+  const set = useProm((s) => s.set);
+  const requestSet = useProm((s) => s.requestSet);
+  const [mode, setMode] = useState<'idle' | 'create' | 'rename'>('idle');
+  const [folder, setFolder] = useState('');
+  const [title, setTitle] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const stopKeys = (event: React.KeyboardEvent): void => {
+    // The stage listens on window for S, D, space and the arrows.
+    if (event.key === 'Escape') setMode('idle');
+    event.stopPropagation();
+  };
+
+  const create = async (): Promise<void> => {
+    const name = folder.trim();
+    if (!name) return;
+    const result = await window.appytron.invoke<{ set: { id: string } }>({
+      capability: 'create_set',
+      // The set id IS the FliHub folder name — one identity, typed by David.
+      // The app never invents a project name (the series is his to continue).
+      input: { id: name, title: title.trim() || name, project: name },
+    });
+    if (!result.ok) {
+      setError(result.error.message);
+      return;
+    }
+    setMode('idle');
+    setFolder('');
+    setTitle('');
+    setError(null);
+    requestSet(result.data.set.id);
+  };
+
+  const rename = async (): Promise<void> => {
+    if (!set) return;
+    const result = await window.appytron.invoke({
+      capability: 'rename_set',
+      input: { setId: set.id, title: title.trim() },
+    });
+    if (!result.ok) {
+      setError(result.error.message);
+      return;
+    }
+    setMode('idle');
+    setTitle('');
+    setError(null);
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {sets.map((entry) => (
+        <Chip
+          key={entry.id}
+          on={entry.id === set?.id}
+          title={entry.project ?? `${entry.title} — no FliHub project attached yet`}
+          onClick={() => {
+            if (entry.id !== set?.id) requestSet(entry.id);
+          }}
+        >
+          {entry.project && (
+            <span className="mr-1.5 font-mono normal-case tracking-normal">
+              {entry.project.split('-', 1)[0].toUpperCase()}
+            </span>
+          )}
+          {entry.title}
+        </Chip>
+      ))}
+
+      {mode === 'create' && (
+        <form
+          className="flex items-center gap-1.5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void create();
+          }}
+        >
+          <input
+            autoFocus
+            value={folder}
+            onChange={(event) => setFolder(event.target.value)}
+            onKeyDown={stopKeys}
+            placeholder="d02-folder-name (FliHub, verbatim)"
+            className="w-64 rounded border border-edge-strong bg-canvas px-2 py-0.5 font-mono text-xs text-ink outline-none"
+          />
+          <input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            onKeyDown={stopKeys}
+            placeholder="title (optional)"
+            className="w-40 rounded border border-edge bg-canvas px-2 py-0.5 font-body text-xs text-ink outline-none"
+          />
+          <Chip on onClick={() => void create()}>
+            Create
+          </Chip>
+          <Chip on={false} onClick={() => setMode('idle')}>
+            Cancel
+          </Chip>
+        </form>
+      )}
+
+      {mode === 'rename' && (
+        <form
+          className="flex items-center gap-1.5"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void rename();
+          }}
+        >
+          <input
+            autoFocus
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            onKeyDown={stopKeys}
+            className="w-52 rounded border border-edge-strong bg-canvas px-2 py-0.5 font-body text-xs text-ink outline-none"
+          />
+          <Chip on onClick={() => void rename()}>
+            Rename
+          </Chip>
+          <Chip on={false} onClick={() => setMode('idle')}>
+            Cancel
+          </Chip>
+        </form>
+      )}
+
+      {mode === 'idle' && (
+        <>
+          <Chip
+            on={false}
+            onClick={() => {
+              setMode('create');
+              setError(null);
+            }}
+          >
+            + New project…
+          </Chip>
+          {set && (
+            <Chip
+              on={false}
+              onClick={() => {
+                setTitle(set.title);
+                setMode('rename');
+                setError(null);
+              }}
+            >
+              Rename…
+            </Chip>
+          )}
+        </>
+      )}
+
+      {/* The core's refusal, verbatim — including "a move, not a rename". */}
+      {error && <span className="font-body text-xs text-sequence">{error}</span>}
+    </div>
+  );
+}
+
 const PRESET_LABEL: Record<string, string> = {
   standard: 'Standard',
   large: 'Large',
@@ -46,8 +220,6 @@ export default function SetupPanel(): JSX.Element | null {
   const set = useProm((s) => s.set);
   const scriptId = useProm((s) => s.scriptId);
   const selectScript = useProm((s) => s.selectScript);
-  const sets = useProm((s) => s.sets);
-  const requestSet = useProm((s) => s.requestSet);
 
   const visible = useProm(useShallow((s) => s.visible));
   const driven = useProm((s) => s.driven);
@@ -120,32 +292,14 @@ export default function SetupPanel(): JSX.Element | null {
           </Field>
         )}
 
-        {/* PROJECT — which script set is on stage. Chips show the FliHub code
-            prefix (display slice only; the stored identity is the full folder
-            name, never parsed) plus the set's title. Switching is UI-ONLY:
-            the agent surface has no verb for it, because an agent must never
-            move the talent. */}
-        {sets.length > 1 && (
-          <Field label="Project">
-            {sets.map((entry) => (
-              <Chip
-                key={entry.id}
-                on={entry.id === set?.id}
-                title={entry.project ?? `${entry.title} — no FliHub project attached yet`}
-                onClick={() => {
-                  if (entry.id !== set?.id) requestSet(entry.id);
-                }}
-              >
-                {entry.project && (
-                  <span className="mr-1.5 font-mono normal-case tracking-normal">
-                    {entry.project.split('-', 1)[0].toUpperCase()}
-                  </span>
-                )}
-                {entry.title}
-              </Chip>
-            ))}
-          </Field>
-        )}
+        {/* PROJECT — which script set is on stage, visible from ONE set, with
+            create and rename. Chips show the FliHub code prefix (display slice
+            only; the stored identity is the full folder name, never parsed).
+            Switching is UI-ONLY: the agent surface has no verb for it, because
+            an agent must never move the talent. */}
+        <Field label="Project">
+          <ProjectAdmin />
+        </Field>
 
         <Field label="Rig">
           <RigChips />
