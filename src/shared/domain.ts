@@ -172,10 +172,38 @@ export interface Script {
  * The unit the talent is handed (requirements §6: "the set is the unit, not the
  * individual script").
  */
+/**
+ * The FliHub folder-name grammar, mirrored VERBATIM — never a second parser.
+ * FliHub owns the grammar (flihub shared/naming.ts; see
+ * flihub/docs/architecture/project-codes.md). Only kebab-case is enforced
+ * there; the letter+number series (d01-…) is convention. Splitting the name
+ * into code+name fields here would be a second truth that drifts the first
+ * time FliHub's rule changes.
+ */
+export const PROJECT_NAME_PATTERN = /^[a-z0-9.]+(-[a-z0-9.]+)*$/;
+export const PROJECT_NAME_MAX = 50;
+
 export interface ScriptSet {
   id: SetId;
   title: string;
   description: string;
+  /**
+   * THE FLIHUB PROJECT this set's scripts record into — the folder name
+   * VERBATIM (`d01-kybernesis-12-videos`), or null for a set not yet attached.
+   *
+   * The shared contract this field implements (Teletubby first, FliHub
+   * expected to adopt as the source of truth inverts — David, 2026-09-02):
+   * folder name = identity, IMMUTABLE through the app; a short code (`d01`)
+   * is a lookup convenience on FliHub's side, never an identifier — store the
+   * full name only. `title` above is the mutable display layer (FliHub's
+   * FR-157 titles are its counterpart). `rename_set` may attach null→value
+   * and change `title`; it refuses changing an attached project — "if the
+   * code is changing that's not a rename, that's a move, and that's a
+   * different problem" (David). Moves are unbuilt in BOTH apps.
+   *
+   * Optional in the type because stored documents predate the field.
+   */
+  project?: string | null;
   scripts: Script[];
 }
 

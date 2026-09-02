@@ -206,9 +206,20 @@ export const CAPABILITIES: readonly CapabilityMeta[] = [
   ),
 
   /* --- writing ----------------------------------------------------- */
-  command('create_set', 'Create an empty script set.', {
-    failureModes: [...WRITE_FAILURES],
-  }),
+  command(
+    'create_set',
+    'Create an empty script set, optionally attached to a FliHub project (full folder name, verbatim).',
+    {
+      failureModes: [...WRITE_FAILURES],
+    },
+  ),
+  command(
+    'rename_set',
+    'Change a set’s TITLE, and/or ATTACH an unattached set to its FliHub project. Never changes an attached project — that is a move, not a rename, and moves are not built.',
+    {
+      failureModes: [...WRITE_FAILURES],
+    },
+  ),
   command('create_script', 'Add a script to a set, optionally with its provenance transcript.'),
   command(
     'update_script',

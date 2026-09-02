@@ -215,6 +215,17 @@ interface PrompterState {
   setText: (preset: TextPreset) => void;
   loadRigs: (rigs: Rig[], workspace: Workspace) => void;
   setRigs: (rigs: Rig[]) => void;
+  /**
+   * Every set (project) in the store, as summaries — for the setup panel's
+   * PROJECT section. Switching is UI-ONLY, like set_active_context: an agent
+   * must never move the talent. The panel asks by setting `requestedSetId`;
+   * App owns the fetch and answers with `load`.
+   */
+  sets: SetSummary[];
+  setSets: (sets: SetSummary[]) => void;
+  requestedSetId: string | null;
+  requestSet: (setId: string) => void;
+  clearRequestedSet: () => void;
   applyRig: (rigId: string) => void;
   adoptRig: (rig: Rig) => void;
   forgetRig: (rigId: string) => void;
@@ -224,6 +235,16 @@ interface PrompterState {
 /* ------------------------------------------------------------------ *
  * Selection helpers — pure, so the rules stay testable without a DOM
  * ------------------------------------------------------------------ */
+
+/** What `list_sets` answers with — a project row for the setup panel. */
+export interface SetSummary {
+  id: string;
+  title: string;
+  description: string;
+  /** The FliHub folder name, verbatim, or null for an unattached set. */
+  project: string | null;
+  scriptCount: number;
+}
 
 /** A transcript with no authored trigger set cannot be stepped at all. */
 const drivable = (t: Transcript): boolean => t.triggerSets.length > 0;
@@ -278,6 +299,8 @@ export const useProm = create<PrompterState>((set, get) => ({
   restoredLayout: false,
   pendingPosition: null,
   freshTranscripts: {},
+  sets: [],
+  requestedSetId: null,
 
   cue: null,
   nudge: 0,
@@ -705,6 +728,10 @@ export const useProm = create<PrompterState>((set, get) => ({
    * a name, and that is all that may happen.
    */
   setRigs: (rigs) => set({ rigs }),
+
+  setSets: (sets) => set({ sets }),
+  requestSet: (setId) => set({ requestedSetId: setId }),
+  clearRequestedSet: () => set({ requestedSetId: null }),
 
   applyRig: (rigId) => {
     const rig = findRig(get().rigs, rigId);

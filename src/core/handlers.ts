@@ -17,6 +17,8 @@
 
 import { z } from '@appydave/core';
 import {
+  PROJECT_NAME_MAX,
+  PROJECT_NAME_PATTERN,
   TRANSCRIPT_KINDS,
   TRIGGER_STYLES,
   findScript,
@@ -91,6 +93,13 @@ const commandEnvelope = {
 };
 
 const slug = z.string().min(1);
+
+/** A FliHub folder name, verbatim — FliHub's own kebab rule, mirrored not reinvented. */
+const projectName = z
+  .string()
+  .trim()
+  .regex(PROJECT_NAME_PATTERN, 'not a FliHub folder name (kebab-case, e.g. d01-kybernesis-12-videos)')
+  .max(PROJECT_NAME_MAX, `a FliHub folder name is at most ${PROJECT_NAME_MAX} characters`);
 
 /* ------------------------------------------------------------------ *
  * Resolution — with ambient context as the default argument
@@ -191,6 +200,7 @@ const setSummary = (set: ScriptSet): unknown => ({
   id: set.id,
   title: set.title,
   description: set.description,
+  project: set.project ?? null,
   scriptCount: set.scripts.length,
   scripts: set.scripts.map((script) => ({
     id: script.id,
@@ -331,6 +341,7 @@ export function createHandlers(): Record<string, Handler> {
         id: set.id,
         title: set.title,
         description: set.description,
+        project: set.project ?? null,
         scriptCount: set.scripts.length,
       })),
     };
@@ -460,6 +471,16 @@ export function createHandlers(): Record<string, Handler> {
         id: slug,
         title: z.string().min(1),
         description: z.string().default(''),
+        /**
+         * The FliHub folder name, VERBATIM and FULL — `d01-kybernesis-12-videos`,
+         * never a short code. On FliHub's side `d01` resolves by prefix to the
+         * first alphabetical match: a lookup convenience, not an identifier.
+         * Existence over there is NOT checked here — FliHub may be down, and its
+         * projects root holds non-project folders too. A caller wanting the
+         * courtesy check resolves via FliHub's API (GET :5101/api/query/projects)
+         * before calling. David names projects; the app never invents one.
+         */
+        project: projectName.nullish(),
         ...commandEnvelope,
       }),
       input,
@@ -468,6 +489,7 @@ export function createHandlers(): Record<string, Handler> {
       id: parsed.id,
       title: parsed.title,
       description: parsed.description ?? '',
+      project: parsed.project ?? null,
       scripts: [],
     };
     assertShape(scriptSetSchema, set, 'set');
@@ -478,6 +500,57 @@ export function createHandlers(): Record<string, Handler> {
       if (context.dryRun) return { document, result: { applied: false, preview: { set } } };
       document.sets.push(set);
       return { document, result: { applied: true, set } };
+    });
+  };
+
+  /**
+   * Rename = the TITLE, never the identity. Mirrors what FliHub actually has:
+   * no project rename exists over there either — titles (.flihub-state.json,
+   * FR-157) are the mutable display layer over an immutable folder name. So
+   * nothing this verb does can desynchronise the two apps.
+   *
+   * `project` here is an ATTACH: null→value backfills a set onto its FliHub
+   * project. value→different is refused in David's own words — a code change
+   * is a move, not a rename, and moves are unbuilt in both apps by ruling.
+   */
+  handlers.rename_set = async (input, context) => {
+    const parsed = parse(
+      z.object({
+        setId: slug.optional(),
+        title: z.string().trim().min(1).optional(),
+        project: projectName.nullish(),
+        ...commandEnvelope,
+      }),
+      input,
+    );
+    if (parsed.title === undefined && parsed.project == null)
+      fail('invalid_input', 'nothing to do — pass a new title, a project to attach, or both');
+
+    return context.repository.update<unknown>((document) => {
+      const set = resolveSet(document, parsed.setId, context.active);
+
+      if (parsed.project != null && set.project && set.project !== parsed.project)
+        fail(
+          'invalid_input',
+          `set "${set.id}" is attached to project "${set.project}" — changing the project ` +
+            `identity is a move, not a rename, and moves are not built (in either app)`,
+        );
+
+      const previous = { title: set.title, project: set.project ?? null };
+      const next = {
+        title: parsed.title ?? set.title,
+        project: parsed.project ?? set.project ?? null,
+      };
+      if (context.dryRun)
+        return { document, result: { applied: false, preview: { ...next }, previous } };
+
+      set.title = next.title;
+      set.project = next.project;
+      context.recordPrior(previous);
+      return {
+        document,
+        result: { applied: true, set: { id: set.id, ...next }, previous },
+      };
     });
   };
 

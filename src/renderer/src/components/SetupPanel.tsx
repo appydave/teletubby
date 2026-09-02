@@ -46,6 +46,8 @@ export default function SetupPanel(): JSX.Element | null {
   const set = useProm((s) => s.set);
   const scriptId = useProm((s) => s.scriptId);
   const selectScript = useProm((s) => s.selectScript);
+  const sets = useProm((s) => s.sets);
+  const requestSet = useProm((s) => s.requestSet);
 
   const visible = useProm(useShallow((s) => s.visible));
   const driven = useProm((s) => s.driven);
@@ -115,6 +117,33 @@ export default function SetupPanel(): JSX.Element | null {
                 </Chip>
               ))}
             </div>
+          </Field>
+        )}
+
+        {/* PROJECT — which script set is on stage. Chips show the FliHub code
+            prefix (display slice only; the stored identity is the full folder
+            name, never parsed) plus the set's title. Switching is UI-ONLY:
+            the agent surface has no verb for it, because an agent must never
+            move the talent. */}
+        {sets.length > 1 && (
+          <Field label="Project">
+            {sets.map((entry) => (
+              <Chip
+                key={entry.id}
+                on={entry.id === set?.id}
+                title={entry.project ?? `${entry.title} — no FliHub project attached yet`}
+                onClick={() => {
+                  if (entry.id !== set?.id) requestSet(entry.id);
+                }}
+              >
+                {entry.project && (
+                  <span className="mr-1.5 font-mono normal-case tracking-normal">
+                    {entry.project.split('-', 1)[0].toUpperCase()}
+                  </span>
+                )}
+                {entry.title}
+              </Chip>
+            ))}
           </Field>
         )}
 

@@ -5,6 +5,7 @@ import { TRIGGER_STYLE_LETTER } from '@shared/domain';
 import type { Rig, Workspace } from '@shared/rig';
 import {
   ZONE_LABEL,
+  type SetSummary,
   activeTriggers,
   currentMajor,
   currentMinor,
@@ -63,23 +64,26 @@ export default function App(): JSX.Element {
   useEffect(() => {
     let cancelled = false;
 
-    const fetchSet = async (apply: (set: ScriptSet) => void): Promise<void> => {
-      const result = await window.appytron.invoke<{ sets: { id: string }[] }>({
+    // Every set, as summaries — the setup panel's PROJECT section renders
+    // these. Returns the list so the callers below can choose WHICH set to
+    // open, instead of the old hardcoded sets[0].
+    const fetchSets = async (): Promise<SetSummary[] | null> => {
+      const result = await window.appytron.invoke<{ sets: SetSummary[] }>({
         capability: 'list_sets',
       });
-      if (cancelled) return;
+      if (cancelled) return null;
       if (!result.ok) {
         setFailure(result.error.message);
-        return;
+        return null;
       }
-      const first = result.data.sets[0];
-      if (!first) {
-        setFailure('No script sets in the store.');
-        return;
-      }
+      useProm.getState().setSets(result.data.sets);
+      return result.data.sets;
+    };
+
+    const fetchSet = async (setId: string, apply: (set: ScriptSet) => void): Promise<void> => {
       const full = await window.appytron.invoke<ScriptSet>({
         capability: 'get_set',
-        input: { setId: first.id, full: true },
+        input: { setId, full: true },
       });
       if (cancelled) return;
       if (!full.ok) {
@@ -103,20 +107,40 @@ export default function App(): JSX.Element {
     // Rigs FIRST, and awaited. The stage does not mount until the set arrives,
     // so getting the arrangement in before that is what stops the talent
     // watching their layout snap from the built-in default into their own.
+    //
+    // WHICH set opens: the one the workspace remembered (position.setId),
+    // falling back to the first. The old code hardcoded sets[0], which was
+    // invisible while one project existed and wrong the day there were two.
     void (async () => {
       await fetchRigs(({ rigs, workspace }) => loadRigs(rigs, workspace));
-      await fetchSet(load);
+      const sets = await fetchSets();
+      if (!sets || cancelled) return;
+      if (sets.length === 0) {
+        setFailure('No script sets in the store.');
+        return;
+      }
+      const remembered = useProm.getState().pendingPosition?.setId;
+      const target = sets.find((entry) => entry.id === remembered)?.id ?? sets[0].id;
+      await fetchSet(target, load);
     })();
 
     // An agent writing through the control API lands here. `refresh` swaps the
     // data without moving the talent — the alternative is that someone editing
     // a trigger word yanks the person on camera back to the top of script 01.
+    // Re-fetch the CURRENT set, not the first — a new project appearing in the
+    // store must never switch the one on stage.
     //
     // Rigs take the same treatment: a rig an agent authored appears as a new
     // chip, and the arrangement on screen is left exactly where it is.
     const unsubscribe = window.appytron.onControlChanged(() => {
       void fetchRigs(({ rigs }) => setRigs(rigs));
-      void fetchSet(refresh);
+      void (async () => {
+        const sets = await fetchSets();
+        if (!sets || cancelled) return;
+        const currentId = useProm.getState().set?.id;
+        const target = sets.find((entry) => entry.id === currentId)?.id ?? sets[0]?.id;
+        if (target) await fetchSet(target, refresh);
+      })();
     });
 
     return () => {
@@ -124,6 +148,30 @@ export default function App(): JSX.Element {
       unsubscribe();
     };
   }, [load, refresh, loadRigs, setRigs]);
+
+  /**
+   * SWITCHING PROJECT — UI-only, same rule as set_active_context: an agent
+   * must never move the talent. The setup panel asks by setting
+   * `requestedSetId`; this effect owns the fetch and answers with `load`,
+   * which opens the set at its default script.
+   */
+  const requestedSetId = useProm((s) => s.requestedSetId);
+  useEffect(() => {
+    if (!requestedSetId) return undefined;
+    let cancelled = false;
+    void (async () => {
+      const full = await window.appytron.invoke<ScriptSet>({
+        capability: 'get_set',
+        input: { setId: requestedSetId, full: true },
+      });
+      if (cancelled) return;
+      if (full.ok) load(full.data);
+      useProm.getState().clearRequestedSet();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [requestedSetId, load]);
 
   if (failure) return <Waiting message={failure} failed />;
   if (!set) return <Waiting message="Loading the set…" />;

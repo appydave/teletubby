@@ -24,7 +24,13 @@ import type {
   Trigger,
   TriggerSet,
 } from './domain.js';
-import { AUTHORSHIPS, TRANSCRIPT_KINDS, TRIGGER_STYLES } from './domain.js';
+import {
+  AUTHORSHIPS,
+  PROJECT_NAME_MAX,
+  PROJECT_NAME_PATTERN,
+  TRANSCRIPT_KINDS,
+  TRIGGER_STYLES,
+} from './domain.js';
 import type { Rig, RigLayout, Workspace } from './rig.js';
 import { CAMERA_SIDES, RECORDING_SET, TEXT_PRESETS } from './rig.js';
 
@@ -91,6 +97,13 @@ export const scriptSetSchema: z.ZodType<ScriptSet> = z.object({
   id: id('set id'),
   title: z.string().trim().min(1, 'set title must not be empty'),
   description: z.string().trim(),
+  // The FliHub folder name, verbatim — kebab only, per FliHub's own rule.
+  // `.nullish()` because stored documents predate the field.
+  project: z
+    .string()
+    .regex(PROJECT_NAME_PATTERN, 'project must be a FliHub folder name (kebab-case)')
+    .max(PROJECT_NAME_MAX, `project must be at most ${PROJECT_NAME_MAX} characters`)
+    .nullish(),
   scripts: z.array(scriptSchema),
 });
 
