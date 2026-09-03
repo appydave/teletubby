@@ -111,9 +111,10 @@ const USAGE = `teletubby — drive the running Teletubby app
   Input ALWAYS goes in --input. A bare JSON positional is refused, not ignored.
     teletubby call get_script --input '{"scriptId":"kybernesis-phase-1/01"}'
 
-  "capabilities" is the authority on what exists — it is generated from the
-  same catalog the gate enforces, so it cannot drift from the app. It does not
-  yet publish per-verb INPUT shapes; until it does, read src/core/handlers.ts.
+  "capabilities" is the authority on what exists AND how to call it — every
+  verb publishes its input fields (name, type, required, default, note),
+  derived from the same zod schema the gate validates with. Compose calls
+  from that; a verb that takes nothing publishes input: [].
 
 Environment:
   TELETUBBY_URL           default http://127.0.0.1:${DEFAULT_PORT}
