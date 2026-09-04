@@ -4,7 +4,7 @@ category: correctness
 severity: high
 date: 2026-08-30
 status: open
-recurrence: 3
+recurrence: 4
 files:
   - src/core/cadence.ts
   - test/cadence-gate.test.ts
@@ -18,7 +18,7 @@ files:
 not-found** when the truthful answer was *nothing was supplied*. The two states looked identical
 on screen and in the log, and in every case someone acted on the wrong one.
 
-## The three instances (recurrence: 3 — at the promotion bar)
+## The instances (recurrence: 4 — past the promotion bar)
 
 1. **The cadence gate, rule 6** (`src/core/cadence.ts:196-205`). `mustTerms` is an optional
    argument that nothing persists — not on `Script`, not in the seed, not in the store, and not
@@ -42,6 +42,16 @@ on screen and in the log, and in every case someone acted on the wrong one.
    missing data instead of your own vanished argument. Fixed: the CLI refuses a stray positional
    and names the right form.
 
+4. **The CLI truncating a SUCCESSFUL large payload** (2026-09-04). `process.exit()` fired
+   immediately after `process.stdout.write()`, killing the process before the pipe drained —
+   piped output cut at exactly 131072 bytes (the pipe buffer), mid-string. teletubby-agent's
+   `json.loads` died on the body of a write that had **applied**, so a success read as a
+   failure and the agent shipped a regex workaround for a parse it should never have needed.
+   Direct-to-terminal and redirect-to-file were unaffected, which is why it survived every
+   by-hand check. Fixed: `process.exitCode` instead of `process.exit()`, so the process exits
+   only after stdout flushes. Reproduced at `get_set full` (133,604 bytes → 131,072 through a
+   pipe) before the fix; full and valid after.
+
 ## The fix, per instance
 
 ```ts
@@ -54,8 +64,8 @@ pass: mustTerms.length > 0 && missing.length === 0,
 actual: mustTerms.length === 0 ? 'no terms supplied — not checked' : ...
 ```
 
-Instance 3 shipped in `55ae4db`. Instances 1 and 2 are open; 2 is the next bug in the queue, and
-1 is waiting on a design decision (where `mustTerms` lives).
+Instances 3 and 4 are fixed and shipped. Instances 1 and 2 are open; 2 is the next bug in the
+queue, and 1 is waiting on a design decision (where `mustTerms` lives).
 
 ## The general rule
 
@@ -66,5 +76,7 @@ never *not found*. The test for a new check is: *what does this print when the i
 and could a reader tell?*
 
 This is the same shape the global preferences already legislate for reports ("a check rules out
-only its own mechanism"). Three instances in one codebase, two of them found on one day, is what
-the promotion bar is for — **left for the human to rule on**, per `README.md`.
+only its own mechanism"). Four instances in one codebase — past the promotion bar, and the
+newest one hid in *process teardown*, not in any check's logic, which is why the family keeps
+growing: the shape recurs anywhere output and outcome are reported separately. Promotion is
+still **the human's to rule on**, per `README.md`.

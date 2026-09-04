@@ -11,6 +11,7 @@ export default function EndCard(): JSX.Element {
   const nudge = useProm((s) => s.nudge);
   const next = useProm(nextScript);
   const goToNextScript = useProm((s) => s.goToNextScript);
+  const scriptCount = useProm((s) => s.set?.scripts.length ?? 0);
 
   const isFinal = !next;
 
@@ -30,7 +31,11 @@ export default function EndCard(): JSX.Element {
       </p>
 
       {isFinal ? (
-        <p className="mt-1 font-body text-script text-ink">That was the last of the twelve.</p>
+        <p className="mt-1 font-body text-script text-ink">
+          {scriptCount > 1
+            ? `That was the last of the ${scriptCount}.`
+            : 'That was the only script in this set.'}
+        </p>
       ) : (
         <>
           <p className="mt-1 font-body text-script text-ink">

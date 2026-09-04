@@ -65,6 +65,33 @@ The three-column view assumes a script already exists. First real-world source i
 scripts. Script *authoring* is currently out of scope — but "rewrite toward David's voice"
 implies Teletubby edits scripts too, which quietly pulls authoring back in.
 
+## Q7. Non-spoken beats — convention or domain? (parked 2026-09-04)
+
+Hit live on d02: paragraph `t2` is an ad-lib beat (improvise from two bullets) and `t7` is a
+live-reaction beat (play audio at 21.20s, respond to it). Both are **real positions in the
+running order** — they need a beat, the trigger map lands on them — but they are not lines to
+read, and today they render exactly like speech, full stage, yellow driven wash.
+
+David, close to verbatim: *"as a teleprompter, I don't need any information about the visual
+structure of a video… I just need raw transcripts"* — then, on seeing the beat was legitimate:
+*"I'm just wondering whether it should just have a slight colour coding going on. Or is it not
+something we can deal with yet? It may just be a documented pattern… maybe do nothing more than
+that for now because I'm not sure that it is a problem."*
+
+**Interim convention, in force now:** a paragraph whose text is wrapped in `[BRACKETS]` is a
+stage direction, not speech. Writers use it for ad-lib and reaction beats; the renderer may key
+off it later without a schema change. Instructions from the writer *to the writing agent*
+("do not invent prose for this") never reach the transcript at all — that is content hygiene
+upstream, not a prompter concern.
+
+**The parked decision:** whether this earns a paragraph-level `kind` (`speech | direction`)
+in `domain.ts` with David's "slight colour coding" in the renderer. The bar for promoting it:
+whatever writes transcripts must actually SET the field — a `kind` nothing sets is the
+`antiVoice` trap again (an existing-but-empty structure that reads as checked). Until a writer
+commits to it, the bracket convention is the honest answer. Related: `t7`'s `21.20s` is the
+per-paragraph timing gap already flagged to David — if timing enters the domain, `kind` likely
+rides the same change.
+
 ---
 
 ## Not yet decided (no stated preference in source)

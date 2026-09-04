@@ -136,7 +136,10 @@ switch (command) {
   case 'health': {
     const { status, payload } = await request('GET', '/api/health');
     print(payload);
-    process.exit(status === 200 ? 0 : 1);
+    // exitCode, never process.exit(): exit() kills the process before stdout
+    // drains to a pipe, truncating large payloads at the pipe buffer — a
+    // SUCCESSFUL call whose body dies in json.loads reads as a failure.
+    process.exitCode = status === 200 ? 0 : 1;
     break;
   }
 
@@ -186,7 +189,8 @@ switch (command) {
     });
     print(payload);
     // Exit non-zero on failure so a script can branch without parsing the body.
-    process.exit(status >= 400 ? 1 : 0);
+    // exitCode, never process.exit() — see the note under `health`.
+    process.exitCode = status >= 400 ? 1 : 0;
     break;
   }
 
