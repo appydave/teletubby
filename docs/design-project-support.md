@@ -91,7 +91,29 @@ Tubby is teleprompter control plus cadence adjustment of someone else's script �
 
 ## Cost & state
 
-~200 lines + tests. Not started. The other queue (version history + atomic write on the
-`replaceTranscript` spine, then the four older tickets — see
-`docs/checkpoint-2026-08-31-recording-day.md`) sits BELOW this per the recording
-schedule. App currently down; start detached (`npm run app`) for verification when built.
+Shipped 2026-09-02 (see frontmatter) — this section's "not started" era is history.
+The other queue (version history + atomic write on the `replaceTranscript` spine, then
+the four older tickets — see `docs/checkpoint-2026-08-31-recording-day.md`) remains
+sequenced behind the recording schedule.
+
+## Addendum — FR-168 "video grain" ruled by David (2026-09-04)
+
+FliHub gained a project-level `ships` field: **"Video per project"** (default) /
+**"Video per chapter"**. Ruled FliHub-ONLY — Teletubby's measured zero runtime
+coupling to FliHub was confirmed as deliberate and stays. What Teletubby contributed,
+adopted upstream:
+
+- **Teletubby already models the grain correctly without the field**: Script = one
+  VIDEO, never a chapter (kybernesis-phase-1 = 12 scripts/12 videos; cutty = 1 script
+  for 6 FliHub chapters, chapters living as major topics). The enum is a DERIVATION
+  RULE for whoever routes scripts in — Teletubby consumes the resulting script list,
+  so FliHub will NOT publish a deliverable list or partition to anyone.
+- **Mixed projects** (some chapters own-video, some sections): inexpressible in the
+  project enum; the named escape hatch in FliHub's PRD is a per-chapter field if one
+  ever appears. Teletubby needs nothing — any N scripts is representable today.
+- **Discards**: David — *"nothing happens till I press the button anyway"* — chapter
+  promotion is on-demand, gaps are fine, contiguity never required. `Script.n` being
+  display-only already matches.
+
+Per-script naming (video-script vs chapter-script, parked above) STAYS PARKED —
+David has named promotion-time output naming as separate future work.
