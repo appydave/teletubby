@@ -233,6 +233,54 @@ function CopyTitle({ text, className }: { text: string; className: string }): JS
   );
 }
 
+/**
+ * The lanes' stand-in when the loaded set has nothing to drive. An empty
+ * state has two jobs — the way out and the way forward — and this one leans
+ * on the setup panel for both (project chips to leave, "+ New project" to
+ * build), which is why Stage auto-opens the panel when a set arrives empty.
+ * What it must never be again is a bare line of text with nothing clickable:
+ * that shipped, and it was a dead end the app relaunched into (2026-09-10).
+ *
+ * Two absences share this screen and are named apart — a project with no
+ * scripts, and a script with no transcript. One message for both would make
+ * absence and absence look alike, which is the same trap as absence looking
+ * like success.
+ */
+function EmptyStage({
+  setTitle,
+  project,
+  kind,
+  setupOpen,
+  onOpenSetup,
+}: {
+  setTitle: string;
+  project: string | null;
+  kind: 'no-scripts' | 'no-transcript';
+  setupOpen: boolean;
+  onOpenSetup: () => void;
+}): JSX.Element {
+  return (
+    <div className="flex min-w-0 flex-1 flex-col items-center justify-center gap-3 px-10 text-center">
+      <p className="font-display text-lg uppercase tracking-wide text-ink">{setTitle}</p>
+      {project && <p className="font-mono text-xs text-muted">{project}</p>}
+      <p className="font-body text-script text-ink">
+        {kind === 'no-scripts'
+          ? 'This project has no scripts yet.'
+          : 'This script has no transcript yet.'}
+      </p>
+      <p className="max-w-md font-body text-sm text-muted">
+        Scripts arrive through the writing agent — the prompter never authors one. Switch to
+        another project in Setup, or leave this one open for the agent to fill.
+      </p>
+      {!setupOpen && (
+        <Chip on={false} onClick={onOpenSetup}>
+          Open Setup <span className="font-mono text-[0.65rem] opacity-60">S</span>
+        </Chip>
+      )}
+    </div>
+  );
+}
+
 function Waiting({ message, failed }: { message: string; failed?: boolean }): JSX.Element {
   return (
     <div className="flex h-screen flex-col bg-canvas text-ink">
@@ -300,6 +348,22 @@ function Stage(): JSX.Element {
   useEffect(() => {
     if (!useProm.getState().restoredLayout) useProm.setState({ setupOpen: true });
   }, []);
+
+  /**
+   * Landing on a project with no scripts opens Setup by itself. The panel IS
+   * the way out (the project chips) and the way forward (+ New project), and
+   * a person on an empty stage must not need to know the S key to leave —
+   * selecting an empty project used to be a dead end with nothing on screen
+   * to click (David, 2026-09-10). Keyed on the set id so closing the panel
+   * is respected until the NEXT switch.
+   */
+  const setId = set?.id;
+  const setIsEmpty = (set?.scripts.length ?? 0) === 0;
+  useEffect(() => {
+    if (setId && setIsEmpty) useProm.setState({ setupOpen: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately NOT
+    // re-firing when scripts arrive or vanish on the same set; only a switch.
+  }, [setId]);
 
   // The text preset is a root-level data attribute so one CSS variable rescales
   // every zone at once.
@@ -509,25 +573,77 @@ function Stage(): JSX.Element {
     closeSetup,
   ]);
 
-  if (!script || !transcript || !set) return <Waiting message="No script selected." />;
+  if (!set) return <Waiting message="Loading the set…" />;
 
-  const zoneNode = (zone: RecordingZone): JSX.Element => {
-    const rank = rankOf(driven, zone);
-    switch (zone) {
-      case 'major':
-        return (
-          <MajorZone key={zone} transcript={transcript} current={major} rank={rank} focus={focus} />
-        );
-      case 'minor':
-        return (
-          <MinorZone key={zone} transcript={transcript} current={minor} rank={rank} focus={focus} />
-        );
-      case 'triggers':
-        return <TriggerZone key={zone} triggers={triggers} step={step} rank={rank} focus={focus} />;
-      case 'paragraph':
-        return <ParagraphZone key={zone} paragraph={paragraph} next={upcoming} rank={rank} />;
-    }
-  };
+  /**
+   * An empty project is a STATE OF THE SHELL, never a reason to unmount it.
+   * This used to be `return <Waiting message="No script selected." />` — a
+   * bare line of text with no drag rail content, no setup panel and no
+   * footer, so selecting a project with no scripts was a dead end with
+   * nothing on screen to click. Worse, the remember-effect above had already
+   * written that set into `workspace.position`, so every relaunch reopened
+   * INTO the dead end (David hit both, 2026-09-10). The shell renders in
+   * every state; only the lanes need a script to drive.
+   */
+  let stage: JSX.Element;
+  if (script && transcript) {
+    const loadedTranscript = transcript;
+    const zoneNode = (zone: RecordingZone): JSX.Element => {
+      const rank = rankOf(driven, zone);
+      switch (zone) {
+        case 'major':
+          return (
+            <MajorZone
+              key={zone}
+              transcript={loadedTranscript}
+              current={major}
+              rank={rank}
+              focus={focus}
+            />
+          );
+        case 'minor':
+          return (
+            <MinorZone
+              key={zone}
+              transcript={loadedTranscript}
+              current={minor}
+              rank={rank}
+              focus={focus}
+            />
+          );
+        case 'triggers':
+          return (
+            <TriggerZone key={zone} triggers={triggers} step={step} rank={rank} focus={focus} />
+          );
+        case 'paragraph':
+          return <ParagraphZone key={zone} paragraph={paragraph} next={upcoming} rank={rank} />;
+      }
+    };
+    stage = (
+      <div className={['flex h-full min-w-0 flex-1', mirror ? 'tt-mirror' : ''].join(' ')}>
+        {order.map((zone, i) => (
+          <Fragment key={zone}>
+            {i > 0 && <Divider onResize={(dx) => resizeZones(order[i - 1], zone, dx)} />}
+            <div className="h-full min-w-0" style={{ flex: weights[zone] }}>
+              {zoneNode(zone)}
+            </div>
+          </Fragment>
+        ))}
+      </div>
+    );
+  } else {
+    stage = (
+      <EmptyStage
+        setTitle={set.title}
+        project={set.project ?? null}
+        // A script with no transcript and a project with no scripts are
+        // different absences and must not share one message.
+        kind={script ? 'no-transcript' : 'no-scripts'}
+        setupOpen={setupOpen}
+        onOpenSetup={toggleSetup}
+      />
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col bg-canvas text-ink">
@@ -567,7 +683,7 @@ function Stage(): JSX.Element {
       */}
       <div className="tt-drag flex h-7 shrink-0 items-center border-b border-edge bg-panel">
         <CopyTitle
-          text={script.title}
+          text={script?.title ?? set.title}
           className="font-display text-[18px] uppercase leading-none tracking-wide text-muted"
         />
       </div>
@@ -587,24 +703,17 @@ function Stage(): JSX.Element {
             saved rig property, and a panel that rebalanced them would rewrite
             the talent's rig every time it opened. */}
         <SetupPanel />
-        <div className={['flex h-full min-w-0 flex-1', mirror ? 'tt-mirror' : ''].join(' ')}>
-          {order.map((zone, i) => (
-            <Fragment key={zone}>
-              {i > 0 && <Divider onResize={(dx) => resizeZones(order[i - 1], zone, dx)} />}
-              <div className="h-full min-w-0" style={{ flex: weights[zone] }}>
-                {zoneNode(zone)}
-              </div>
-            </Fragment>
-          ))}
-        </div>
-        <TranscriptDrawer
-          transcript={transcript}
-          currentParagraphId={paragraphId}
-          edge={transcriptEdge}
-          open={transcriptOpen}
-          onClose={toggleTranscript}
-        />
-        {cadenceOpen && transcript.talentId && (
+        {stage}
+        {transcript && (
+          <TranscriptDrawer
+            transcript={transcript}
+            currentParagraphId={paragraphId}
+            edge={transcriptEdge}
+            open={transcriptOpen}
+            onClose={toggleTranscript}
+          />
+        )}
+        {cadenceOpen && script && transcript && transcript.talentId && (
           <CadencePanel
             scriptId={script.id}
             transcriptId={transcript.id}
@@ -613,7 +722,7 @@ function Stage(): JSX.Element {
             onClose={() => setCadenceOpen(false)}
           />
         )}
-        {cadenceOpen && !transcript.talentId && (
+        {cadenceOpen && transcript && !transcript.talentId && (
           <div
             className="absolute inset-0 z-30 flex items-start justify-center bg-veil pt-16"
             onClick={() => setCadenceOpen(false)}
@@ -657,21 +766,32 @@ function Stage(): JSX.Element {
           {/* The stepper walks to the NEIGHBOURING script. Jumping to 07 is what
               the grid in the setup panel is for. Both are clamped by the store,
               so neither can roll off the end of the set. */}
-          <div className="flex items-center gap-1">
-            <StepButton label="Previous script" disabled={!hasPrev} onClick={goToPrevScript}>
-              ◀
-            </StepButton>
-            <span className="rounded bg-driven px-1.5 font-mono text-xs text-ink">
-              {String(script.n).padStart(2, '0')}
+          {script ? (
+            <>
+              <div className="flex items-center gap-1">
+                <StepButton label="Previous script" disabled={!hasPrev} onClick={goToPrevScript}>
+                  ◀
+                </StepButton>
+                <span className="rounded bg-driven px-1.5 font-mono text-xs text-ink">
+                  {String(script.n).padStart(2, '0')}
+                </span>
+                <StepButton label="Next script" disabled={!hasNext} onClick={goToNextScript}>
+                  ▶
+                </StepButton>
+              </div>
+              <CopyTitle
+                text={script.title}
+                className="font-display text-sm uppercase tracking-wide text-ink"
+              />
+            </>
+          ) : (
+            // The empty state keeps an honest footer: WHERE you are (the set),
+            // and that there is nothing to step through — never a bare gap
+            // that reads as a broken strip.
+            <span className="font-display text-sm uppercase tracking-wide text-muted">
+              {set.title} — no scripts
             </span>
-            <StepButton label="Next script" disabled={!hasNext} onClick={goToNextScript}>
-              ▶
-            </StepButton>
-          </div>
-          <CopyTitle
-            text={script.title}
-            className="font-display text-sm uppercase tracking-wide text-ink"
-          />
+          )}
 
           <span className="h-4 w-px shrink-0 bg-edge" />
 
@@ -684,13 +804,13 @@ function Stage(): JSX.Element {
                 believing it had not landed — the write path worked, the chip
                 just looked like every other grey chip. The dot must read from
                 across the room, which is the actual viewing distance. */}
-            {script.transcripts.map((t) => {
-              const arrived = (freshTranscripts[script.id] ?? []).includes(t.id);
+            {(script?.transcripts ?? []).map((t) => {
+              const arrived = (freshTranscripts[script?.id ?? ''] ?? []).includes(t.id);
               const isSource = t.kind === 'provenance';
               return (
                 <Chip
                   key={t.id}
-                  on={t.id === transcript.id}
+                  on={t.id === transcript?.id}
                   source={isSource}
                   title={
                     isSource
@@ -715,7 +835,7 @@ function Stage(): JSX.Element {
           <div className="flex shrink-0 gap-1.5">
             {(['near-verbatim', 'compressed-concept', 'loose-keywords'] as TriggerStyle[]).map(
               (candidate) => {
-                const has = transcript.triggerSets.some((t) => t.style === candidate);
+                const has = (transcript?.triggerSets ?? []).some((t) => t.style === candidate);
                 return (
                   <Chip
                     key={candidate}
@@ -733,9 +853,11 @@ function Stage(): JSX.Element {
 
           <span className="h-4 w-px shrink-0 bg-edge" />
 
-          <Chip on={cadenceOpen} onClick={() => setCadenceOpen((open) => !open)}>
-            Cadence
-          </Chip>
+          {transcript && (
+            <Chip on={cadenceOpen} onClick={() => setCadenceOpen((open) => !open)}>
+              Cadence
+            </Chip>
+          )}
 
           {/* Where you are, in words. The set title and the takeaway that used to
               sit here are gone: neither changes during a take, and the takeaway
