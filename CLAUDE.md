@@ -388,7 +388,11 @@ identical command line and answered first the one time it mattered. Scope it to
 
 Full detail — what does and does not prove the app is up, the detachment tree, and
 driving the control API — lives in the **`teletubby` skill**
-(`~/.claude/skills/teletubby/SKILL.md`, invoked as `/teletubby`).
+(`~/dev/ad/appydave-plugins/flivideo/skills/teletubby/SKILL.md`, invoked as
+`/flivideo:teletubby`). A `~/.claude/skills/teletubby/` copy does NOT exist and this
+file used to point there — anyone following that pointer found an empty directory and
+concluded the skill was missing, when only the pointer was wrong (caught 2026-09-10,
+during the move to `~/dev/ad/flivideo/teletubby`).
 
 ⚠️ **That skill is the single owner of launching this app, and it lives OUTSIDE the
 repo on purpose** — beside `flihub` and `flideck`, which are the same thing for their

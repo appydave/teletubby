@@ -76,12 +76,16 @@ not authored yet — an agent writes them through the control API, the app never
 Canonical location — **do not clone it anywhere else**, several docs reference this path:
 
 ```
-~/dev/ad/apps/teletubby          # git@github.com:appydave/teletubby.git
+~/dev/ad/flivideo/teletubby      # git@github.com:appydave/teletubby.git
 ```
 
-Jump alias: **`japp-teletubby`** (registry key `teletubby`). It follows the `japp-<name>`
-convention shared by the other `~/dev/ad/apps` entries, kept whole rather than shortened
-because the name carries no redundant prefix — same class as `japp-thumbrack`.
+Moved from `~/dev/ad/apps/teletubby` on 2026-09-10 — David ruled it belongs to
+FliVideo, the organisation ("it's part of the YouTube workflow system"). Dated
+handovers and checkpoints still naming the old path described it correctly at the
+time; only live pointers were updated.
+
+Jump alias: **`jfli-tubby`** (registry key `teletubby`), following the `jfli-<name>`
+convention of the other FliVideo apps.
 
 **The alias is already registered and pushed**, so another machine does not re-add it —
 it pulls it. The registry is git-synced; only the generated shell file is per-machine:
